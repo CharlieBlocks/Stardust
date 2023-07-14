@@ -49,6 +49,7 @@
 
 #Custom
 Build
-Premake
+BlenderAssets
+premake
 .vs
 

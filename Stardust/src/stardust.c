@@ -10,6 +10,7 @@
 #include <crtdbg.h>
 
 #include "loaders/OBJLoader.h"
+#include "postprocessing.h"
 
 size_t sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustErrorCode* result, StardustMesh** meshes)
 {
@@ -51,6 +52,12 @@ size_t sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustErrorC
 		sd_FreeStringArray(splitString, stringElem);
 	free(filenameBuffer);
 
+	
+	//Perform post processing
+	for (int i = 0; i < meshCount; i++)
+		_post_PerformPostProcessing(meshes[i], flags);
+
+
 	*result = STARDUST_ERROR_SUCCESS;
 
 	return meshCount;
@@ -74,4 +81,29 @@ STARDUST_FUNC int sd_isFormatSupported(const char* format)
 STARDUST_FUNC void sd_PrintVertex(Vertex* v)
 {
 	printf("Vertex Pos: (%f, %f, %f, %f), Vertex UVW: (%f, %f, %f), Vertex Norm (%f, %f, %f)\n", v->x, v->y, v->z, v->w, v->texU, v->texV, v->texW, v->normX, v->normY, v->normZ);
+}
+
+STARDUST_FUNC int sd_CompareVertexPosition(Vertex* a, Vertex* b)
+{
+	return a->x == b->x &&
+		a->y == b->y &&
+		a->z == b->z &&
+		a->w == a->w;
+}
+
+STARDUST_FUNC int sd_CompareVertex(Vertex* a, Vertex* b)
+{
+	return a->x == b->x &&
+		a->y == b->y &&
+		a->z == b->z &&
+		a->w == b->w &&
+
+		a->texU == b->texU &&
+		a->texV == b->texV &&
+		a->texW == b->texW &&
+
+		a->normX == b->normX &&
+		a->normY == b->normY &&
+		a->normZ == b->normZ;
+
 }

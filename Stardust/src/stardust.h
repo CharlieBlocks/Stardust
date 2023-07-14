@@ -26,7 +26,6 @@ DOCUMENTATION:
 // ================== Defines ================== //
 #define MAX_LINE_BUFFER_SIZE 256
 
-
 // ================== Types ================== //
 #include <stdint.h>
 
@@ -34,9 +33,12 @@ enum MeshFlags
 {
 	STARDUST_MESH_IGNORE_NORMALS = 1 << 0,			//Doesn't load normals from file.
 	STARDUST_MESH_GENERATE_NORMALS = 1 << 1,		//Genrates mesh normals after loading the mesh
-	STARDUST_MESH_IGNORE_UVS = 1 << 2,				//Doesn't load texture coordinates from file
-	STARDUST_MESH_MERGE_MESHES = 1 << 3,			//Merges all meshes into a single mesh
-	STARDUST_MESH_USE_FIRST_MESH = 1 << 4			//Only uses first mesh found in file
+	STARDUST_MESH_SMOOTH_NORMALS = 1 << 2,			//Smooths any normals
+	STARDUST_MESH_HARDEN_NORMALS = 1 << 3,			//Hardens any normals
+
+	STARDUST_MESH_IGNORE_UVS = 1 << 4,				//Doesn't load texture coordinates from file
+	STARDUST_MESH_MERGE_MESHES = 1 << 5,			//Merges all meshes into a single mesh
+	STARDUST_MESH_USE_FIRST_MESH = 1 << 6			//Only uses first mesh found in file
 };
 
 enum MeshDataFlags
@@ -46,6 +48,7 @@ enum MeshDataFlags
 	STARDUST_TEXTURE_DATA = 1 << 2,
 	STARDUST_NORMAL_DATA = 1 << 3,
 	STARDUST_COLOR_DATA = 1 << 4,
+	STARDUST_SMOOTHSHADING = 1 << 5
 };
 
 enum ErrorCodes
@@ -101,7 +104,23 @@ STARDUST_FUNC void sd_FreeMesh(StardustMesh* mesh);
 
 STARDUST_FUNC int sd_isFormatSupported(const char* format);
 
+// Vertex Functions
+
+/// <summary>
+/// Prints a given vertex
+/// </summary>
+/// <param name="v">Vertex to print</param>
+/// <returns></returns>
 STARDUST_FUNC void sd_PrintVertex(Vertex* v);
+
+/// <summary>
+/// Compares two vertices' positions
+/// </summary>
+/// <param name="a">Vertex A</param>
+/// <param name="b">Vertex B</param>
+/// <returns>1 for eq, 0 for neq</returns>
+STARDUST_FUNC int sd_CompareVertexPosition(Vertex* a, Vertex* b);
+STARDUST_FUNC int sd_CompareVertex(Vertex* a, Vertex* b);
 
 //STARDUST_FUNC const char* sd_TranslateError(StardustErrorCode code);
 

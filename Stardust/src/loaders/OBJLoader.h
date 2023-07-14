@@ -10,7 +10,8 @@ enum OBJTagTypes
 	OBJTAG_VERTEX = 1 << 0,
 	OBJTAG_TEXCOORD = 1 << 1,
 	OBJTAG_NORMAL = 1 << 2,
-	OBJTAG_FACE = 1 << 3
+	OBJTAG_FACE = 1 << 3,
+	OBJTAG_SMOOTH = 1 << 4
 };
 
 typedef struct

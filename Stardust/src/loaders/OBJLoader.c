@@ -281,7 +281,18 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 				}
 			}
 
-}
+		}
+		else if (strcmp(prefix, "s") == 0)
+		{
+			if (currentObject == -1) //Ensure that object was created
+			{
+				*result = STARDUST_ERROR_FILE_INVALID;
+				return 0;
+			}
+
+			//Label objects as smooth shaded
+			objects[currentObject].tags->tags |= OBJTAG_SMOOTH;
+		}
 		else if (strcmp(prefix, "vp") == 0)
 		{
 			//NOT SUPPORTED YET
@@ -508,6 +519,8 @@ StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, size
 			meshes[i].dataType |= STARDUST_TEXTURE_DATA;
 		if (!ignore_normals)
 			meshes[i].dataType |= STARDUST_NORMAL_DATA;
+		if ((objects[i].tags->tags & OBJTAG_SMOOTH) == OBJTAG_SMOOTH)
+			meshes[i].dataType |= STARDUST_SMOOTHSHADING;
 	}
 
 	return STARDUST_ERROR_SUCCESS;
