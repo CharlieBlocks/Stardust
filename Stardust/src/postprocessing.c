@@ -110,6 +110,99 @@ void _post_SmoothNormals(StardustMesh* mesh)
 }
 
 
+
+
+
+// ================= Harden Normals ================= //
+
+void _post_HardenNormals(StardustMesh* mesh)
+{
+	//Loop by face.
+	uint32_t vertexCount = 0;
+	uint32_t indexCount = 0;
+
+	Vertex* vertexArray = malloc(mesh->indexCount * mesh->vertexStride * sizeof(Vertex));
+	uint32_t* indexArray = malloc(mesh->indexCount * mesh->vertexStride * sizeof(uint32_t));
+
+	assert(vertexArray != 0);
+	assert(indexArray != 0);
+
+	for (uint32_t i = 0; i < mesh->indexCount; i += mesh->vertexStride)
+	{
+		// a == 1
+		// b == 2
+		// c == 3
+		// norm(cross(b - a, c - a))
+
+		uint32_t a = mesh->indices[i];
+		uint32_t b = mesh->indices[i + 1];
+		uint32_t c = mesh->indices[i + 2];
+
+		//Edge AB
+		float edgeAx = mesh->vertices[b].x - mesh->vertices[a].x;
+		float edgeAy = mesh->vertices[b].y - mesh->vertices[a].y;
+		float edgeAz = mesh->vertices[b].z - mesh->vertices[a].z;
+
+		//Edge AC
+		float edgeBx = mesh->vertices[c].x - mesh->vertices[a].x;
+		float edgeBy = mesh->vertices[c].y - mesh->vertices[a].y;
+		float edgeBz = mesh->vertices[c].z - mesh->vertices[a].z;
+
+		//Cross product
+		float normX = edgeAy*edgeBz - edgeAz*edgeBy;
+		float normY = edgeAz*edgeBx - edgeAx*edgeBz;
+		float normZ = edgeAx*edgeBy - edgeAy*edgeBx;
+
+		//Mag
+		float mag = sqrtf(normX*normX + normY*normY + normZ*normZ);
+		normX /= mag;
+		normY /= mag;
+		normZ /= mag;
+
+		//Create vertices
+		for (uint32_t j = i; j < i + 3; j++)
+		{
+
+			uint32_t idx = mesh->indices[j];
+
+			vertexArray[j].x = mesh->vertices[idx].x;
+			vertexArray[j].y = mesh->vertices[idx].x;
+			vertexArray[j].z = mesh->vertices[idx].x;
+			vertexArray[j].w = mesh->vertices[idx].w;
+
+			vertexArray[j].texU = mesh->vertices[idx].texU;
+			vertexArray[j].texV = mesh->vertices[idx].texV;
+			vertexArray[j].texW = mesh->vertices[idx].texW;
+
+			vertexArray[j].normX = normX;
+			vertexArray[j].normY = normY;
+			vertexArray[j].normZ = normZ;
+
+			indexArray[j] = j;
+		}
+
+		vertexCount += mesh->vertexStride;
+		indexCount += mesh->vertexStride;
+	}
+
+	//Free old data
+	free(mesh->vertices);
+	free(mesh->indices);
+
+	//Set new data
+	mesh->vertices = vertexArray;
+	mesh->indices = indexArray;
+
+	mesh->vertexCount = vertexCount;
+	mesh->indexCount = indexCount;
+
+	//Shrink vertices
+	_post_RecomputeIndexArray(mesh);
+}
+
+
+// ================= Utils ================= //
+
 void _post_RecomputeIndexArray(StardustMesh* mesh)
 {
 	uint32_t vertexCount = 0;
@@ -168,17 +261,6 @@ void _post_RecomputeIndexArray(StardustMesh* mesh)
 	mesh->vertexCount = vertexCount;
 	mesh->indexCount = indexCount;
 }
-
-
-
-// ================= Harden Normals ================= //
-
-void _post_HardenNormals(StardustMesh* mesh)
-{
-}
-
-
-// ================= Utils ================= //
 
 int _post_ComarePositions(NormalPosition* norm, Vertex* vertex)
 {

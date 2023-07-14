@@ -512,6 +512,8 @@ StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, size
 
 		meshes[i].indexCount = objects[i].tags->indexPosition;
 
+		meshes[i].vertexStride = objects[i].tags->elementsPerFace;
+
 		meshes[i].dataType = STARDUST_VERTEX_DATA | STARDUST_INDEX_DATA;
 		if (include_rgb)
 			meshes[i].dataType |= STARDUST_COLOR_DATA;

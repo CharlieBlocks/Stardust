@@ -38,13 +38,6 @@ void _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags);
 /// <param name="mesh">Mesh to be smoothed</param>
 void _post_SmoothNormals(StardustMesh* mesh);
 
-/// <summary>
-/// Removes duplicate verticies from a mesh
-/// This will update the mesh verticies and the mesh indices along with their respective counts
-/// This is slower than the hash method that can be used by a loader
-/// </summary>
-/// <param name="mesh">Mesh to be reduced</param>
-void _post_RecomputeIndexArray(StardustMesh* mesh);
 
 
 // Hardening //
@@ -61,6 +54,16 @@ void _post_HardenNormals(StardustMesh* mesh);
 
 
 // Util Funcs //
+
+/// <summary>
+/// Removes duplicate verticies from a mesh
+/// This will update the mesh verticies and the mesh indices along with their respective counts
+/// This is slower than the hash method that can be used by a loader
+/// </summary>
+/// <param name="mesh">Mesh to be reduced</param>
+void _post_RecomputeIndexArray(StardustMesh* mesh);
+
+
 int _post_ComarePositions(NormalPosition* norm, Vertex* vertex);
 
 

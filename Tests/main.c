@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 	StardustErrorCode res;
 	StardustMesh* meshes = 0;
 	//StardustMesh* mesh = sd_LoadMesh("D:\\Programs\\C\\Stardust\\Tests\\cube.obj", 0, &res);
-	size_t meshCount = sd_LoadMesh("D:\\Programs\\C\\Stardust\\Tests\\cube.obj", STARDUST_MESH_SMOOTH_NORMALS, &res, &meshes);
+	size_t meshCount = sd_LoadMesh("D:\\Programs\\C\\Stardust\\BlenderAssets\\smoothCube.obj", STARDUST_MESH_HARDEN_NORMALS, &res, &meshes);
 
 	for (uint32_t i = 0; i < meshes->vertexCount; i++)
 	{

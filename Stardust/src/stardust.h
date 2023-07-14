@@ -96,6 +96,8 @@ typedef struct
 	uint32_t		vertexCount;	//Number of vertices in the vertices array
 	uint32_t		indexCount;		//Number of indices in the indices array
 
+	uint32_t		vertexStride;//Number of verticies per face
+
 } StardustMesh; //Mesh structure. Retured in arrays of each individual componenets
 
 //Function prototypes
