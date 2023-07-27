@@ -31,7 +31,7 @@ typedef struct
 /// </summary>
 /// <param name="mesh">Mesh pointer to be processed. This will change the underlying object</param>
 /// <param name="flags">The appropriate post processing flags</param>
-void _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags);
+StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags);
 
 
 
@@ -43,7 +43,7 @@ void _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags);
 /// This is done by getting all verticies of the same position and averaging their normals.
 /// </summary>
 /// <param name="mesh">Mesh to be smoothed</param>
-void _post_SmoothNormals(StardustMesh* mesh);
+StardustErrorCode _post_SmoothNormals(StardustMesh* mesh);
 
 
 
@@ -56,7 +56,7 @@ void _post_SmoothNormals(StardustMesh* mesh);
 /// This function will recalculate the indices of the mesh
 /// </summary>
 /// <param name="mesh"></param>
-void _post_HardenNormals(StardustMesh* mesh);
+StardustErrorCode _post_HardenNormals(StardustMesh* mesh);
 
 
 
@@ -68,16 +68,18 @@ void _post_HardenNormals(StardustMesh* mesh);
 /// Can be called on a mesh that is already triangulated as it will early exit.
 /// </summary>
 /// <param name="mesh"></param>
-void _post_TriangulateMeshEC(StardustMesh* mesh);
+StardustErrorCode _post_TriangulateMeshEC(StardustMesh* mesh);
 
 /// <summary>
 /// Triangulates a polygon and places the triangulated indices into indexArray
+/// Assumes a CCW winding order
 /// </summary>
 /// <param name="mesh">Mesh containing the vertices that the poly is indexed from<\param>
 /// <param name="poly"></param>
 /// <param name="indexArray"></param>
+/// <param name="returnCode">Return code from the function</param>
 /// <returns></returns>
-uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t* indexArray);
+StardustErrorCode _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t* indexArray, uint32_t* polygonCount);
 
 /// <summary>
 /// Calculates which vertices of a mesh polygon are convex or reflexive.
@@ -116,12 +118,58 @@ uint32_t _post_FillEars(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndic
 /// This is slower than the hash method that can be used by a loader
 /// </summary>
 /// <param name="mesh">Mesh to be reduced</param>
-void _post_RecomputeIndexArray(StardustMesh* mesh);
+/// <return>Returns the error code</return>
+StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh);
 
+/// <summary>
+/// Compares the position of a NormalPosition object to a Vertex object.
+/// </summary>
+/// <param name="norm">Pointer to a normal position object</param>
+/// <param name="vertex">Pointer to a Vertex object</param>
+/// <returns>1 for a match. Otherwise 0</returns>
 int _post_ComarePositions(NormalPosition* norm, Vertex* vertex);
+
+/// <summary>
+/// Indicates wheteher a vertex is convex.
+/// Takes a triangle of the adjacent vertices to "vertex", (Vprev, Vnext) and the normal of the polygon
+/// Proceeds to check that the vertex winding faces the normal direction.
+/// Assumes a CCW winding order
+/// Credit for Idea goes to https://github.com/NMO13/earclipper/blob/master/EarClipperLib/Misc.cs#L13
+/// </summary>
+/// <param name="vertex">Vertex to evalutate</param>
+/// <param name="Vprev">Previous vertex in the polygon</param>
+/// <param name="Vnext">Next vertex in the polygon</param>
+/// <param name="normal">Polygon normal</param>
+/// <returns>1 for convex, -1 for concave, 0 is an error</returns>
 int _post_IsVertexConvex(Vertex* vertex, Vertex* Vprev, Vertex* Vnext, Vertex* normal);
+
+/// <summary>
+/// An algorithm for checking whether triangle (A,B,C) contains vertex P
+/// Assumes a CCW winding order
+/// </summary>
+/// <param name="a">Point A of the triangle</param>
+/// <param name="b">Point B of the traingle</param>
+/// <param name="c">Point C of the triangle</param>
+/// <param name="p">Point to test</param>
+/// <returns>1 if the ABC contains P, otherwise returns 0</returns>
 int _post_TriangleContainsPoint(Vertex* a, Vertex* b, Vertex* c, Vertex* p);
-void _post_RemoveFromPolygon(Polygon* poly, uint32_t count, uint32_t idx);
+
+/// <summary>
+/// Removes a indices at the given index from the polygon object.
+/// Does not reallocate any memory. Simply overwrites the value with the values above it using memcpy.
+/// Will decrease poly->vertexCount attribute
+/// </summary>
+/// <param name="poly">Polygon to remove an index from</param>
+/// <param name="idx">Index to remove</param>
+void _post_RemoveFromPolygon(Polygon* poly, uint32_t idx);
+
+/// <summary>
+/// Calculates the normal of a projected polygon.
+/// This is, I think, called Newell's method.
+/// Credit for implementation goes to -> https://github.com/NMO13/earclipper/blob/master/EarClipperLib/EarClipping.cs#L49
+/// </summary>
+/// <param name="mesh"></param>
+/// <param name="poly"></param>
 void _post_CalculatePolygonNormal(StardustMesh* mesh, Polygon* poly);
 
 

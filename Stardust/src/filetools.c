@@ -10,6 +10,7 @@ int sd_FileExists(const char* file)
 	return stat(file, &buffer) == 0;
 }
 
+//Could potentially have some problems with memory where it won't produce a STARDUST_ERROR_MEMORY_ERROR if it goes wrong.
 char** sd_SplitString(char* str, const char delim, size_t* count)
 {
 	char** result = 0; //Initialise memory to zero
@@ -30,7 +31,10 @@ char** sd_SplitString(char* str, const char delim, size_t* count)
 	result = malloc(sizeof(char*) * (*count));
 	//Validate malloc
 	if (!result)
+	{
+		*count = 0;
 		return 0; //return nullptr
+	}
 
 	//Iterate over string and create substrings
 	tmp = str; //Reset to begining
@@ -45,7 +49,11 @@ char** sd_SplitString(char* str, const char delim, size_t* count)
 			//Copy previous into memory
 			result[idx] = malloc(sizeof(char) * (lastChar + 1)); //Allocate string space + null terminator
 			if (result[idx] == 0)
+			{
+				free(result);
+				*count = 0;
 				return 0;
+			}
 
 			strncpy_s(result[idx], sizeof(char) * lastChar + 1, tmp - lastChar, lastChar);
 
@@ -61,7 +69,13 @@ char** sd_SplitString(char* str, const char delim, size_t* count)
 	//Add trailing string
 	result[idx] = malloc(sizeof(char) * (lastChar + 1));
 	if (result[idx] == 0)
+	{
+		for (int i = 0; i < (*count) - 1; i++)
+			free(result[i]);
+		free(result);
+		*count = 0;
 		return 0;
+	}
 
 	const char* start = tmp - lastChar;
 	strncpy_s(result[idx], sizeof(char) * lastChar + 1, tmp - lastChar, lastChar);

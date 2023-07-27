@@ -62,6 +62,7 @@ enum ErrorCodes
 	STARDUST_ERROR_LINE_EXCCEDS_BUFFER = 1 << 3,
 	STARDUST_ERROR_FILE_INVALID = 1 << 4,
 	STARDUST_ERROR_IO_ERROR = 1 << 5,
+	STARDUST_ERROR_MEMORY_ERROR = 1 << 6
 };
 
 typedef unsigned int StardustMeshFlags;
@@ -104,7 +105,7 @@ typedef struct
 } StardustMesh; //Mesh structure. Retured in arrays of each individual componenets
 
 //Function prototypes
-STARDUST_FUNC size_t sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustErrorCode* result, StardustMesh** meshes);
+STARDUST_FUNC StardustErrorCode sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount);
 STARDUST_FUNC void sd_FreeMesh(StardustMesh* mesh);
 
 STARDUST_FUNC int sd_isFormatSupported(const char* format);
@@ -127,6 +128,6 @@ STARDUST_FUNC void sd_PrintVertex(Vertex* v);
 STARDUST_FUNC int sd_CompareVertexPosition(Vertex* a, Vertex* b);
 STARDUST_FUNC int sd_CompareVertex(Vertex* a, Vertex* b);
 
-//STARDUST_FUNC const char* sd_TranslateError(StardustErrorCode code);
+//Error Functions
 
 #endif //_STARDUST_HEADER

@@ -1,28 +1,39 @@
 #include "postprocessing.h"
 
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <math.h>
 
 #include <stdio.h>
-#include <crtdbg.h>
 
-void _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags)
+StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags)
 {
+	StardustErrorCode ret;
+
 	//Switch on flags
 	if ((flags & STARDUST_MESH_TRIANGULATE) == STARDUST_MESH_TRIANGULATE)
-		_post_TriangulateMeshEC(mesh);
+	{
+		ret = _post_TriangulateMeshEC(mesh);
+		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+	}
 	if ((flags & STARDUST_MESH_SMOOTH_NORMALS) == STARDUST_MESH_SMOOTH_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) != STARDUST_SMOOTHSHADING)
-		_post_SmoothNormals(mesh); //Smooth normals if flag is present and mesh does not contain smooth normals
+	{
+		ret = _post_SmoothNormals(mesh); //Smooth normals if flag is present and mesh does not contain smooth normals
+		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+	}
 	if ((flags & STARDUST_MESH_HARDEN_NORMALS) == STARDUST_MESH_HARDEN_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) == STARDUST_SMOOTHSHADING)
-		_post_HardenNormals(mesh); //Harden normals if flag is present and mesh contains smoothed normals
+	{
+		ret = _post_HardenNormals(mesh); //Harden normals if flag is present and mesh contains smoothed normals
+		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+	}
+
+	return STARDUST_ERROR_SUCCESS;
 }
 
 
 // ================= Smooth Normals ================= //
 
-void _post_SmoothNormals(StardustMesh* mesh)
+StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 {
 	// Create index list of simillar position vertices //
 	
@@ -30,10 +41,9 @@ void _post_SmoothNormals(StardustMesh* mesh)
 	
 	//Set buckets for wost case scenario
 	NormalPosition** normalBuckets = malloc(mesh->vertexCount * sizeof(NormalPosition*)); //Assume that every vertex is different
+	if (normalBuckets == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 	uint32_t* bucketSizes = malloc(mesh->vertexCount * sizeof(uint32_t));
-
-	assert(normalBuckets != 0);
-	assert(bucketSizes != 0);
+	if (bucketSizes == 0) { free(normalBuckets); return STARDUST_ERROR_MEMORY_ERROR; }
 
 	memset(normalBuckets, 0, mesh->vertexCount * sizeof(Vertex*));
 	memset(bucketSizes, 0, mesh->vertexCount * sizeof(uint32_t));
@@ -50,7 +60,14 @@ void _post_SmoothNormals(StardustMesh* mesh)
 		
 		//Allocate new bucket
 		NormalPosition* newBucket = malloc(((size_t)bucketSizes[j] + 1) * sizeof(NormalPosition));
-		assert(newBucket != 0); //Assert allocation
+		if (newBucket == 0)
+		{
+			for (uint32_t k = 0; k < bucketCount; k++)
+				free(normalBuckets[k]);
+			free(normalBuckets);
+			free(bucketSizes);
+			return STARDUST_ERROR_MEMORY_ERROR;
+		}
 
 		//Copy in old data
 		memcpy(newBucket, normalBuckets[j], (size_t)bucketSizes[j] * sizeof(NormalPosition));
@@ -111,6 +128,8 @@ void _post_SmoothNormals(StardustMesh* mesh)
 	free(normalBuckets);
 
 	_post_RecomputeIndexArray(mesh);
+
+	return STARDUST_ERROR_SUCCESS;
 }
 
 
@@ -119,18 +138,18 @@ void _post_SmoothNormals(StardustMesh* mesh)
 
 // ================= Harden Normals ================= //
 
-void _post_HardenNormals(StardustMesh* mesh)
+StardustErrorCode _post_HardenNormals(StardustMesh* mesh)
 {
 	//Loop by face.
 	uint32_t vertexCount = 0;
 	uint32_t indexCount = 0;
 
 	Vertex* vertexArray = malloc(mesh->indexCount * mesh->vertexStride * sizeof(Vertex));
+	if (vertexArray == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 	uint32_t* indexArray = malloc(mesh->indexCount * mesh->vertexStride * sizeof(uint32_t));
+	if (indexArray == 0) { free(vertexArray);  return STARDUST_ERROR_MEMORY_ERROR; }
 
-	assert(vertexArray != 0);
-	assert(indexArray != 0);
-
+	
 	for (uint32_t i = 0; i < mesh->indexCount; i += mesh->vertexStride)
 	{
 		// a == 1
@@ -204,33 +223,38 @@ void _post_HardenNormals(StardustMesh* mesh)
 
 	//Shrink vertices
 	_post_RecomputeIndexArray(mesh);
+
+	return STARDUST_ERROR_SUCCESS;
 }
 
 
 // ================= Triangulation ================= //
 
-void _post_TriangulateMeshEC(StardustMesh* mesh)
+StardustErrorCode _post_TriangulateMeshEC(StardustMesh* mesh)
 {
 	//Check that mesh isn't already triangulated
 	if (mesh->vertexStride == 3)
-		return;
+		return STARDUST_ERROR_SUCCESS;
 
 	//Precalculate polygon count
 	uint32_t polygonCount = mesh->indexCount / mesh->vertexStride; //IndexCount / number of indices per polygon
 
 	//Allocate polygon array
 	Polygon* polygons = malloc(sizeof(Polygon) * polygonCount);
-	assert(polygons != 0);
-
-	//Clear polygons
-	//memset(polygons, 0, sizeof(Polygon) * polygonCount);
+	if (polygons == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 
 	//Fill polygons
 	for (uint32_t i = 0; i < polygonCount; i++)
 	{
 		uint32_t index = i * mesh->vertexStride;
 		polygons[i].indices = malloc(sizeof(uint32_t) * mesh->vertexStride); //WHAT?
-		assert(polygons[i].indices != 0);
+		if (polygons[i].indices == 0)
+		{
+			for (uint32_t j = 0; j < i; i++)
+				free(polygons[j].indices);
+			free(polygons);
+			return STARDUST_ERROR_MEMORY_ERROR;
+		}
 
 		for (uint32_t j = 0; j < mesh->vertexStride; j++)
 			polygons[i].indices[j] = mesh->indices[mesh->indices[index + j]]; //WHAT?
@@ -242,14 +266,37 @@ void _post_TriangulateMeshEC(StardustMesh* mesh)
 
 	//Allocate new index array
 	uint32_t* newIndices = malloc(sizeof(uint32_t) * 3 * (mesh->indexCount - 2));
-	assert(newIndices);
+	if (newIndices == 0)
+	{
+		for (uint32_t i = 0; i < polygonCount; i++)
+		{
+			if (polygons[i].indices != 0)
+				free(polygons[i].indices);
+		}
+		free(polygons);
 
-	uint32_t newIndexCount = 0;
+		return STARDUST_ERROR_MEMORY_ERROR;
+	}
 
 	//Iterate over polygons and triangulate them
+	StardustErrorCode res; //Return code
+	uint32_t count = 0; //Number of polygons triangulated from fuctiion
+	uint32_t newIndexCount = 0; //Position in newIndices
 	for (uint32_t i = 0; i < polygonCount; i++)
 	{
-		uint32_t count = _post_TriangulatePolygonEC(mesh, &polygons[i], newIndices + newIndexCount);
+		res = _post_TriangulatePolygonEC(mesh, &polygons[i], newIndices + newIndexCount, &count);
+		if (res != STARDUST_ERROR_SUCCESS) //Validate success
+		{
+			for (uint32_t i = 0; i < polygonCount; i++)
+			{
+				if (polygons[i].indices != 0)
+					free(polygons[i].indices);
+			}
+			free(polygons);
+			free(newIndices);
+			return res;
+		}
+
 		newIndexCount += count;
 	}
 
@@ -259,28 +306,24 @@ void _post_TriangulateMeshEC(StardustMesh* mesh)
 	mesh->vertexStride = 3;
 	mesh->indexCount = newIndexCount;
 
-	assert(_CrtCheckMemory());
-
 	for (uint32_t i = 0; i < polygonCount; i++)
 	{
 		if (polygons[i].indices != 0)
 			free(polygons[i].indices);
-		assert(_CrtCheckMemory());
 	}
-
 	free(polygons);
-	//free(newIndices);
 
+	return STARDUST_ERROR_SUCCESS;
 }
 
-uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t* indexArray)
+StardustErrorCode _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t* indexArray, uint32_t* polygonCount)
 {
 	//Preallocate arrays
 	uint32_t* convexIndices = malloc(sizeof(uint32_t) * mesh->vertexStride); //Allocate for maximum scenarios
+	if (convexIndices == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 	uint32_t* concaveIndices = malloc(sizeof(uint32_t) * mesh->vertexStride); 
+	if (concaveIndices == 0) { free(convexIndices); return STARDUST_ERROR_MEMORY_ERROR; }
 
-	assert(convexIndices != 0);
-	assert(concaveIndices != 0);
 
 	//Get convex indices
 	uint32_t convexCount = _post_FillConvexConcaveVertices(mesh, poly, convexIndices, concaveIndices);
@@ -288,7 +331,11 @@ uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t*
 
 	//Preallocate ears
 	uint32_t* earIndices = malloc(sizeof(uint32_t) * mesh->vertexStride);
-	assert(earIndices != 0);
+	if (earIndices == 0) 
+	{ 
+		free(convexIndices); free(concaveIndices);
+		return STARDUST_ERROR_MEMORY_ERROR;
+	}
 
 	//Get ears
 	uint32_t earCount = _post_FillEars(mesh, poly, convexIndices, convexCount, concaveIndices, concaveCount, earIndices);
@@ -309,8 +356,7 @@ uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t*
 		indexCount += 3;
 
 		//Remove from polygon
-		_post_RemoveFromPolygon(poly, poly->vertexCount, earIdx);
-		assert(_CrtCheckMemory());
+		_post_RemoveFromPolygon(poly, earIdx);
 
 		//	Recalculate convex indices
 		convexCount = _post_FillConvexConcaveVertices(mesh, poly, convexIndices, concaveIndices);
@@ -324,7 +370,9 @@ uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t*
 	free(concaveIndices);
 	free(earIndices);
 
-	return indexCount;
+	*polygonCount = indexCount;
+
+	return STARDUST_ERROR_SUCCESS;
 }
 
 uint32_t _post_FillConvexConcaveVertices(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndices, uint32_t* concaveIndices)
@@ -390,16 +438,15 @@ uint32_t _post_FillEars(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndic
 // ================= Utils ================= //
 
 
-void _post_RecomputeIndexArray(StardustMesh* mesh)
+StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh)
 {
 	uint32_t vertexCount = 0;
 	uint32_t indexCount = 0;
 
 	Vertex* vertexArray = malloc(mesh->vertexCount * sizeof(Vertex)); //Assign max size arrays. reduce later
+	if (vertexArray == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 	uint32_t* indexArray = malloc(mesh->vertexCount * sizeof(uint32_t));
-
-	assert(vertexArray != 0);
-	assert(indexArray != 0);
+	if (indexArray == 0) { free(vertexArray);  return STARDUST_ERROR_MEMORY_ERROR; }
 
 	for (uint32_t i = 0; i < mesh->vertexCount; i++)
 	{
@@ -426,12 +473,8 @@ void _post_RecomputeIndexArray(StardustMesh* mesh)
 			//Add vertex to array
 			vertexArray[vertexCount] = *meshVertex; //Copy instruction
 
-			assert(_CrtCheckMemory());
-
 			//Add index to array
 			indexArray[indexCount] = vertexCount;
-
-			assert(_CrtCheckMemory());
 
 			//Increment arrays
 			indexCount++;
@@ -447,6 +490,8 @@ void _post_RecomputeIndexArray(StardustMesh* mesh)
 
 	mesh->vertexCount = vertexCount;
 	mesh->indexCount = indexCount;
+
+	return STARDUST_ERROR_MEMORY_ERROR;
 }
 
 int _post_ComarePositions(NormalPosition* norm, Vertex* vertex)
@@ -507,15 +552,15 @@ int _post_TriangleContainsPoint(Vertex* a, Vertex* b, Vertex* c, Vertex* p)
 	return 0;
 }
 
-void _post_RemoveFromPolygon(Polygon* poly, uint32_t count, uint32_t idx)
+void _post_RemoveFromPolygon(Polygon* poly, uint32_t idx)
 {
-	if (idx == count - 1)
+	if (idx == poly->vertexCount - 1)
 	{
 		poly->vertexCount -= 1;
 		return;
 	}
 
-	memcpy(poly + idx, poly + idx + 1, (count - 1) - idx);
+	memcpy(poly + idx, poly + idx + 1, (poly->vertexCount - 1) - idx);
 
 	poly->vertexCount -= 1;
 }

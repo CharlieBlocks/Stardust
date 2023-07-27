@@ -59,7 +59,7 @@ typedef struct
 StardustErrorCode _obj_LoadMesh(const char* file, StardustMeshFlags flags, StardustMesh** mesh, size_t* count);
 
 OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount);
-void _obj_AllocateTagArrays(OBJTags* tags);
+StardustErrorCode _obj_AllocateTagArrays(OBJTags* tags);
 
 void _obj_RemoveTags(OBJObject* objects, size_t objectCount, StardustMeshFlags flags);
 
