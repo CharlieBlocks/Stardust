@@ -11,10 +11,12 @@
 void _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFlags flags)
 {
 	//Switch on flags
-	if ((flags & STARDUST_MESH_SMOOTH_NORMALS) == STARDUST_MESH_SMOOTH_NORMALS)
-		_post_SmoothNormals(mesh);
-	if ((flags & STARDUST_MESH_HARDEN_NORMALS) == STARDUST_MESH_HARDEN_NORMALS)
-		_post_HardenNormals(mesh);
+	if ((flags & STARDUST_MESH_TRIANGULATE) == STARDUST_MESH_TRIANGULATE)
+		_post_TriangulateMeshEC(mesh);
+	if ((flags & STARDUST_MESH_SMOOTH_NORMALS) == STARDUST_MESH_SMOOTH_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) != STARDUST_SMOOTHSHADING)
+		_post_SmoothNormals(mesh); //Smooth normals if flag is present and mesh does not contain smooth normals
+	if ((flags & STARDUST_MESH_HARDEN_NORMALS) == STARDUST_MESH_HARDEN_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) == STARDUST_SMOOTHSHADING)
+		_post_HardenNormals(mesh); //Harden normals if flag is present and mesh contains smoothed normals
 }
 
 
@@ -100,6 +102,8 @@ void _post_SmoothNormals(StardustMesh* mesh)
 			mesh->vertices[normalBuckets[i][j].index].normZ = totalZ;
 		}
 	}
+
+	mesh->dataType |= STARDUST_SMOOTHSHADING;
 
 	free(bucketSizes);
 	for (uint32_t i = 0; i < bucketCount; i++)
@@ -196,12 +200,195 @@ void _post_HardenNormals(StardustMesh* mesh)
 	mesh->vertexCount = vertexCount;
 	mesh->indexCount = indexCount;
 
+	mesh->dataType &= ~STARDUST_SMOOTHSHADING;
+
 	//Shrink vertices
 	_post_RecomputeIndexArray(mesh);
 }
 
 
+// ================= Triangulation ================= //
+
+void _post_TriangulateMeshEC(StardustMesh* mesh)
+{
+	//Check that mesh isn't already triangulated
+	if (mesh->vertexStride == 3)
+		return;
+
+	//Precalculate polygon count
+	uint32_t polygonCount = mesh->indexCount / mesh->vertexStride; //IndexCount / number of indices per polygon
+
+	//Allocate polygon array
+	Polygon* polygons = malloc(sizeof(Polygon) * polygonCount);
+	assert(polygons != 0);
+
+	//Clear polygons
+	//memset(polygons, 0, sizeof(Polygon) * polygonCount);
+
+	//Fill polygons
+	for (uint32_t i = 0; i < polygonCount; i++)
+	{
+		uint32_t index = i * mesh->vertexStride;
+		polygons[i].indices = malloc(sizeof(uint32_t) * mesh->vertexStride); //WHAT?
+		assert(polygons[i].indices != 0);
+
+		for (uint32_t j = 0; j < mesh->vertexStride; j++)
+			polygons[i].indices[j] = mesh->indices[mesh->indices[index + j]]; //WHAT?
+		polygons[i].vertexCount = mesh->vertexStride;
+
+		_post_CalculatePolygonNormal(mesh, &polygons[i]);
+	}
+
+
+	//Allocate new index array
+	uint32_t* newIndices = malloc(sizeof(uint32_t) * 3 * (mesh->indexCount - 2));
+	assert(newIndices);
+
+	uint32_t newIndexCount = 0;
+
+	//Iterate over polygons and triangulate them
+	for (uint32_t i = 0; i < polygonCount; i++)
+	{
+		uint32_t count = _post_TriangulatePolygonEC(mesh, &polygons[i], newIndices + newIndexCount);
+		newIndexCount += count;
+	}
+
+	//Set mesh to new indices
+	free(mesh->indices);
+	mesh->indices = newIndices;
+	mesh->vertexStride = 3;
+	mesh->indexCount = newIndexCount;
+
+	assert(_CrtCheckMemory());
+
+	for (uint32_t i = 0; i < polygonCount; i++)
+	{
+		if (polygons[i].indices != 0)
+			free(polygons[i].indices);
+		assert(_CrtCheckMemory());
+	}
+
+	free(polygons);
+	//free(newIndices);
+
+}
+
+uint32_t _post_TriangulatePolygonEC(StardustMesh* mesh, Polygon* poly, uint32_t* indexArray)
+{
+	//Preallocate arrays
+	uint32_t* convexIndices = malloc(sizeof(uint32_t) * mesh->vertexStride); //Allocate for maximum scenarios
+	uint32_t* concaveIndices = malloc(sizeof(uint32_t) * mesh->vertexStride); 
+
+	assert(convexIndices != 0);
+	assert(concaveIndices != 0);
+
+	//Get convex indices
+	uint32_t convexCount = _post_FillConvexConcaveVertices(mesh, poly, convexIndices, concaveIndices);
+	uint32_t concaveCount = mesh->vertexStride - convexCount;
+
+	//Preallocate ears
+	uint32_t* earIndices = malloc(sizeof(uint32_t) * mesh->vertexStride);
+	assert(earIndices != 0);
+
+	//Get ears
+	uint32_t earCount = _post_FillEars(mesh, poly, convexIndices, convexCount, concaveIndices, concaveCount, earIndices);
+
+	//Loop over ears
+	uint32_t indexCount = 0;
+	while (earCount > 0)
+	{
+		//	Get indices
+		uint32_t earIdx = earIndices[earCount - 1];
+		uint32_t prevIdx = (earIdx + poly->vertexCount - 1) % poly->vertexCount;
+		uint32_t nextIdx = (earIdx + 1) % poly->vertexCount;
+
+		//	Add to indexArray
+		indexArray[indexCount] = poly->indices[prevIdx];
+		indexArray[indexCount + 1] = poly->indices[earIdx];
+		indexArray[indexCount + 2] = poly->indices[nextIdx];
+		indexCount += 3;
+
+		//Remove from polygon
+		_post_RemoveFromPolygon(poly, poly->vertexCount, earIdx);
+		assert(_CrtCheckMemory());
+
+		//	Recalculate convex indices
+		convexCount = _post_FillConvexConcaveVertices(mesh, poly, convexIndices, concaveIndices);
+		concaveCount = mesh->vertexStride - concaveCount;
+
+		//	Recalculate ears
+		earCount = _post_FillEars(mesh, poly, convexIndices, convexCount, concaveIndices, concaveCount, earIndices);
+	}
+
+	free(convexIndices);
+	free(concaveIndices);
+	free(earIndices);
+
+	return indexCount;
+}
+
+uint32_t _post_FillConvexConcaveVertices(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndices, uint32_t* concaveIndices)
+{
+	//Counters
+	uint32_t vexIdx = 0; //Convex idx
+	uint32_t aveIdx = 0; //Concave idx
+
+	//Iterate over indices
+	for (uint32_t i = 0; i < poly->vertexCount; i++)
+	{
+		//Get previous and next vertices for triangle
+		uint32_t prevIdx = (i + poly->vertexCount - 1) % poly->vertexCount; //I'm pretty sure C doesn't auto abs the result of a modulo op like python does.
+		uint32_t nextIdx = (i + 1) % poly->vertexCount;
+
+		//Check if vertex is convex. Indiex into vertex array by using mesh->indices
+		if (_post_IsVertexConvex(&mesh->vertices[poly->indices[i]], &mesh->vertices[poly->indices[prevIdx]], &mesh->vertices[poly->indices[nextIdx]], &poly->normal) == 1)
+		{
+			convexIndices[vexIdx] = i; //Add vertex as convexVertex
+			vexIdx++; //Increment Counter
+		}
+		else
+		{
+			concaveIndices[aveIdx] = i; //Add vertex as concaveVertex
+			aveIdx++; //Increment Counter
+		}
+	}
+
+	return vexIdx; //Only return a vexIdx because aveIdx can be calculated using mesh->vertexCount - vexIdx
+}
+
+uint32_t _post_FillEars(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndices, uint32_t convexCount, uint32_t* concaveIndices, uint32_t concaveCount, uint32_t* earArray)
+{
+	uint32_t earIdx = 0;
+
+	for (uint32_t i = 0; i < convexCount; i++)
+	{
+		//Get adjacent indices
+		uint32_t currIdx = poly->indices[convexCount];
+		uint32_t prevIdx = (currIdx + mesh->vertexStride - 1) % mesh->vertexStride;
+		uint32_t nextIdx = (currIdx + 1) % mesh->vertexStride;
+
+		int isEar = 1;
+		for (uint32_t j = 0; j < concaveCount; j++)
+		{
+			if (j == prevIdx || j == nextIdx)
+				continue;
+
+			if (_post_TriangleContainsPoint(&mesh->vertices[prevIdx], &mesh->vertices[currIdx], &mesh->vertices[nextIdx], &mesh->vertices[j]))
+				isEar = 0;
+		}
+
+		if (isEar)
+		{
+			earArray[earIdx] = i;
+			earIdx++;
+		}
+	}
+
+	return earIdx;
+}
+
 // ================= Utils ================= //
+
 
 void _post_RecomputeIndexArray(StardustMesh* mesh)
 {
@@ -268,4 +455,84 @@ int _post_ComarePositions(NormalPosition* norm, Vertex* vertex)
 		norm->y == vertex->y &&
 		norm->z == vertex->z &&
 		norm->w == vertex->w;
+}
+
+int _post_IsVertexConvex(Vertex* vertex, Vertex* vPrev, Vertex* vNext, Vertex* normal)
+{
+	//Get edges
+	float E1x = vPrev->x - vertex->x;
+	float E1y = vPrev->y - vertex->y;
+	float E1z = vPrev->z - vertex->z;
+	
+	float E2x = vNext->x - vertex->x;
+	float E2y = vNext->y - vertex->y;
+	float E2z = vNext->z - vertex->z;
+
+	//Cross product
+	float crossX = (E1y * E2z) - (E1z * E2y);
+	float crossY = (E1z * E2x) - (E1x * E2z);
+	float crossZ = (E1x * E2y) - (E1y * E2x);
+
+	//Length squared
+	float l2 = crossX*crossX + crossY*crossY + crossZ*crossZ;
+
+	if (l2 == 0) //Early exit
+		return 0;
+
+	//Get signs
+	int xSign = signbit(crossX);
+	int ySign = signbit(crossY);
+	int zSign = signbit(crossZ);
+
+	int xSignNormal = signbit(normal->x);
+	int ySignNormal = signbit(normal->y);
+	int zSignNormal = signbit(normal->z);
+
+	if (xSign != xSignNormal || ySign != ySignNormal || zSign != zSignNormal) //Return -1 if concave
+		return 1;
+	return -1; //Return 1 if convex
+
+}
+
+//Came from some stack overflow post. Can't remember which one. 
+int _post_TriangleContainsPoint(Vertex* a, Vertex* b, Vertex* c, Vertex* p)
+{
+	float A = 0.5f * (b->y * c->x + a->y * (-b->x + c->x) + a->x * (b->y - c->y) + b->x * c->y);
+	float sign = A > 0.0f ? 1.0f : -1.0f;
+	float s = (a->y * c->x - a->x * c->y + (c->y - a->y) * p->x + (a->x - c->x) * p->y) * sign;
+	float t = (a->x * b->y - a->y * b->x + (a->y - b->y) * p->x + (b->x - a->x) * p->y) * sign;
+
+	if (s > 0 && t > 0 && (s + t) < 2 * A * sign)
+		return 1;
+	return 0;
+}
+
+void _post_RemoveFromPolygon(Polygon* poly, uint32_t count, uint32_t idx)
+{
+	if (idx == count - 1)
+	{
+		poly->vertexCount -= 1;
+		return;
+	}
+
+	memcpy(poly + idx, poly + idx + 1, (count - 1) - idx);
+
+	poly->vertexCount -= 1;
+}
+
+void _post_CalculatePolygonNormal(StardustMesh* mesh, Polygon* poly)
+{
+	//Zero poly normal
+	memset(&poly->normal, 0, sizeof(Vertex));
+
+	for (uint32_t i = 0; i < poly->vertexCount; i++)
+	{
+		uint32_t j = (i + 1) % poly->vertexCount;
+		Vertex* vertA = &mesh->vertices[poly->indices[i]];
+		Vertex* vertB = &mesh->vertices[poly->indices[j]];
+
+		poly->normal.x += (vertA->y - vertB->y) * (vertA->z + vertB->z);
+		poly->normal.y += (vertA->z - vertB->z) * (vertA->x + vertB->x);
+		poly->normal.z += (vertA->x - vertB->x) * (vertA->y + vertB->y);
+	}
 }

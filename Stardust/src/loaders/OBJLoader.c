@@ -289,9 +289,15 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 				*result = STARDUST_ERROR_FILE_INVALID;
 				return 0;
 			}
+			if (splitCount != 2)
+			{
+				*result = STARDUST_ERROR_FILE_INVALID;
+				return 0;
+			}
 
 			//Label objects as smooth shaded
-			objects[currentObject].tags->tags |= OBJTAG_SMOOTH;
+			if (splitLine[1] == "1")
+				objects[currentObject].tags->tags |= OBJTAG_SMOOTH;
 		}
 		else if (strcmp(prefix, "vp") == 0)
 		{

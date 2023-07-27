@@ -37,8 +37,11 @@ enum MeshFlags
 	STARDUST_MESH_HARDEN_NORMALS = 1 << 3,			//Hardens any normals
 
 	STARDUST_MESH_IGNORE_UVS = 1 << 4,				//Doesn't load texture coordinates from file
-	STARDUST_MESH_MERGE_MESHES = 1 << 5,			//Merges all meshes into a single mesh
-	STARDUST_MESH_USE_FIRST_MESH = 1 << 6			//Only uses first mesh found in file
+
+	STARDUST_MESH_TRIANGULATE = 1 << 5,			//Triangulate mesh. Safe to call on pretriangulated meshes.
+	
+	STARDUST_MESH_MERGE_MESHES = 1 << 6,			//Merges all meshes into a single mesh
+	STARDUST_MESH_USE_FIRST_MESH = 1 << 7			//Only uses first mesh found in file
 };
 
 enum MeshDataFlags
