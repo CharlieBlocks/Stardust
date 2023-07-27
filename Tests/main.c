@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	size_t meshCount = 0;
 	//StardustErrorCode res = sd_LoadMesh("D:\\Programs\\C\\Stardust\\BlenderAssets\\nonTrigCube.obj", STARDUST_MESH_TRIANGULATE | STARDUST_MESH_SMOOTH_NORMALS, &meshes, &meshCount);
 	//StardustErrorCode res = sd_LoadMesh("D:\\Programs\\C\\Stardust\\BlenderAssets\\smoothCube.obj", STARDUST_MESH_HARDEN_NORMALS, &meshes, &meshCount);
-	StardustErrorCode res = sd_LoadMesh("D:\\Programs\\C\\Stardust\\BlenderAssets\\cube.obj", 0, &meshes, &meshCount);
+	StardustErrorCode res = sd_LoadMesh("D:\\Programs\\C\\Stardust\\BlenderAssets\\cube.obj", STARDUST_MESH_SMOOTH_NORMALS, &meshes, &meshCount);
 
 	printf("Vertex Stride: %i\n", meshes->vertexStride);
 	printf("Vertex Count: %i\n", meshes->vertexCount);

@@ -33,8 +33,8 @@ enum MeshFlags
 {
 	STARDUST_MESH_IGNORE_NORMALS = 1 << 0,			//Doesn't load normals from file.
 	STARDUST_MESH_GENERATE_NORMALS = 1 << 1,		//Genrates mesh normals after loading the mesh
+	STARDUST_MESH_HARDEN_NORMALS = 1 << 1,			//Hardens any normals
 	STARDUST_MESH_SMOOTH_NORMALS = 1 << 2,			//Smooths any normals
-	STARDUST_MESH_HARDEN_NORMALS = 1 << 3,			//Hardens any normals
 
 	STARDUST_MESH_IGNORE_UVS = 1 << 4,				//Doesn't load texture coordinates from file
 

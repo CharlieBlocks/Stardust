@@ -35,7 +35,7 @@ StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFl
 
 
 
-// Smoothing //
+// Normal Smoothing //
 
 /// <summary>
 /// Smooths the normals of mesh.
@@ -47,20 +47,22 @@ StardustErrorCode _post_SmoothNormals(StardustMesh* mesh);
 
 
 
-// Hardening //
+// Normal Hardening / Generate normals //
 
 /// <summary>
-/// Hardens the normals of a mesh
+/// Regenerates the normals for a mesh as face normals.
+/// This can be used to "harden normals" as well
 /// This may increase the amount of verticies in the mesh
 /// This is done by calculating the face normal of each mesh and creating verticies using it.
 /// This function will recalculate the indices of the mesh
 /// </summary>
 /// <param name="mesh"></param>
-StardustErrorCode _post_HardenNormals(StardustMesh* mesh);
+/// <returns>Error code</returns>
+StardustErrorCode _post_GenerateNormals(StardustMesh* mesh);
 
 
 
-// Triangulation //
+// Mesh Triangulation //
 
 /// <summary>
 /// Triangulates a mesh using the ear clipping method.

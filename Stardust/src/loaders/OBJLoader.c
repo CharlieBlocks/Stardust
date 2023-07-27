@@ -23,7 +23,7 @@ StardustErrorCode _obj_LoadMesh(const char* filename, StardustMeshFlags flags, S
 	
 	// ---------------- Find OBJ tags and tag counts ---------------- //
 	size_t objectCount;
-	OBJObject* objects = _obj_GetObjects(fileHandle, &result, &objectCount);
+	OBJObject* objects = _obj_GetObjects(fileHandle, &result, &objectCount, (flags & STARDUST_MESH_USE_FIRST_MESH) == STARDUST_MESH_USE_FIRST_MESH);
 
 	//Early exit if zero objects are returned
 	if (result != STARDUST_ERROR_SUCCESS)
@@ -95,7 +95,7 @@ StardustErrorCode _obj_LoadMesh(const char* filename, StardustMeshFlags flags, S
 	return result;
 }
 
-OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount)
+OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount, int useFirstMesh)
 {
 	// Predefine Variables //
 	char buffer[MAX_LINE_BUFFER_SIZE]; //Buffer
@@ -112,10 +112,6 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 		{
 			//Throw overflow error
 			*result = STARDUST_ERROR_LINE_EXCCEDS_BUFFER;
-			
-			//Check for cleanup
-			//if (currentObjectCount > 0)
-				//_obj_FreeObjects(objects, currentObjectCount);
 
 			return 0;
 		}
@@ -130,6 +126,13 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 		//Compare prefix with tags
 		if (strcmp(prefix, "o") == 0) //New Object
 		{
+			if (useFirstMesh && currentObjectCount > 0)
+			{
+				*result = STARDUST_ERROR_SUCCESS;
+				return objects;
+			}
+
+
 			//Allocate larger array for object
 			OBJObject* newObjects = malloc(sizeof(OBJObject) * (currentObjectCount + 1)); //Create larger array
 			if (newObjects == 0)
@@ -416,6 +419,7 @@ StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, size_t obj
 	// Define variables //
 	char buffer[MAX_LINE_BUFFER_SIZE]; //Ignmoring EOL checks since they were done by _obj_GetObjects
 
+	uint32_t nextObjectIndex = 0;
 	OBJObject* currentObject = 0;
 
 	int ignore_texCoords = 0;
@@ -434,15 +438,12 @@ StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, size_t obj
 		//Compare prefix with tags
 		if (strcmp(prefix, "o") == 0) //Object
 		{
+			if (nextObjectIndex == objectCount) //Exit out of file if we didn't create any more objects
+				return STARDUST_ERROR_SUCCESS;
+
 			//Find current object in objects
-			for (int i = 0; i < objectCount; i++)
-			{
-				if (strcmp(objects[i].name, splitLine[1]) == 0)
-				{
-					currentObject = &objects[i];
-					break;
-				}
-			}
+			currentObject = &objects[nextObjectIndex];
+			nextObjectIndex += 1;
 
 			ignore_texCoords = (currentObject->tags->tags & OBJTAG_TEXCOORD) == 0;
 			ignore_normals = (currentObject->tags->tags & OBJTAG_NORMAL) == 0;

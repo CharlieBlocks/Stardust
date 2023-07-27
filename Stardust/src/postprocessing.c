@@ -11,25 +11,37 @@ StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFl
 	StardustErrorCode ret;
 
 	//Switch on flags
+
+	//Triangulation of meshes
 	if ((flags & STARDUST_MESH_TRIANGULATE) == STARDUST_MESH_TRIANGULATE)
 	{
 		ret = _post_TriangulateMeshEC(mesh);
 		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
 	}
+
+	//Normal Generation / Normal Hardening
+	if ((flags & STARDUST_MESH_GENERATE_NORMALS) == STARDUST_MESH_GENERATE_NORMALS)
+	{
+		//Check that mesh is triangulated
+		if (mesh->vertexStride != 3)
+		{
+			ret = _post_TriangulateMeshEC(mesh); //If not, triangulate
+			if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+		}
+
+		ret = _post_GenerateNormals(mesh);
+		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+	}
+
+	//Normal Smoothing
 	if ((flags & STARDUST_MESH_SMOOTH_NORMALS) == STARDUST_MESH_SMOOTH_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) != STARDUST_SMOOTHSHADING)
 	{
 		ret = _post_SmoothNormals(mesh); //Smooth normals if flag is present and mesh does not contain smooth normals
 		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
 	}
-	if ((flags & STARDUST_MESH_HARDEN_NORMALS) == STARDUST_MESH_HARDEN_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) == STARDUST_SMOOTHSHADING)
-	{
-		ret = _post_HardenNormals(mesh); //Harden normals if flag is present and mesh contains smoothed normals
-		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
-	}
 
 	return STARDUST_ERROR_SUCCESS;
 }
-
 
 // ================= Smooth Normals ================= //
 
@@ -136,9 +148,9 @@ StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 
 
 
-// ================= Harden Normals ================= //
+// ================= Generate Normals ================= //
 
-StardustErrorCode _post_HardenNormals(StardustMesh* mesh)
+StardustErrorCode _post_GenerateNormals(StardustMesh* mesh)
 {
 	//Loop by face.
 	uint32_t vertexCount = 0;
@@ -185,12 +197,11 @@ StardustErrorCode _post_HardenNormals(StardustMesh* mesh)
 		//Create vertices
 		for (uint32_t j = i; j < i + 3; j++)
 		{
-
 			uint32_t idx = mesh->indices[j];
 
 			vertexArray[j].x = mesh->vertices[idx].x;
-			vertexArray[j].y = mesh->vertices[idx].x;
-			vertexArray[j].z = mesh->vertices[idx].x;
+			vertexArray[j].y = mesh->vertices[idx].y;
+			vertexArray[j].z = mesh->vertices[idx].z;
 			vertexArray[j].w = mesh->vertices[idx].w;
 
 			vertexArray[j].texU = mesh->vertices[idx].texU;
@@ -441,17 +452,16 @@ uint32_t _post_FillEars(StardustMesh* mesh, Polygon* poly, uint32_t* convexIndic
 StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh)
 {
 	uint32_t vertexCount = 0;
-	uint32_t indexCount = 0;
 
 	Vertex* vertexArray = malloc(mesh->vertexCount * sizeof(Vertex)); //Assign max size arrays. reduce later
 	if (vertexArray == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
-	uint32_t* indexArray = malloc(mesh->vertexCount * sizeof(uint32_t));
+	uint32_t* indexArray = malloc(mesh->indexCount * sizeof(uint32_t));
 	if (indexArray == 0) { free(vertexArray);  return STARDUST_ERROR_MEMORY_ERROR; }
 
-	for (uint32_t i = 0; i < mesh->vertexCount; i++)
+	for (uint32_t i = 0; i < mesh->indexCount; i++)
 	{
 		//Get vertex pointer
-		Vertex* meshVertex = &mesh->vertices[i];
+		Vertex* meshVertex = &mesh->vertices[mesh->indices[i]];
 
 		//Check if vertex exists within vertexArray
 		int found = 0;
@@ -460,8 +470,7 @@ StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh)
 			if (sd_CompareVertex(meshVertex, &(vertexArray[j])))
 			{
 				//Add indice to indexArray
-				indexArray[indexCount] = j;
-				indexCount++;
+				indexArray[i] = j;
 
 				found = 1;
 				break;
@@ -474,10 +483,9 @@ StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh)
 			vertexArray[vertexCount] = *meshVertex; //Copy instruction
 
 			//Add index to array
-			indexArray[indexCount] = vertexCount;
+			indexArray[i] = vertexCount;
 
 			//Increment arrays
-			indexCount++;
 			vertexCount++;
 		}
 	}
@@ -489,7 +497,6 @@ StardustErrorCode _post_RecomputeIndexArray(StardustMesh* mesh)
 	mesh->indices = indexArray;
 
 	mesh->vertexCount = vertexCount;
-	mesh->indexCount = indexCount;
 
 	return STARDUST_ERROR_MEMORY_ERROR;
 }
