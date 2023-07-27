@@ -50,6 +50,7 @@
 #Custom
 Build
 BlenderAssets
-premake
+premake5.exe
 .vs
+Wiki
 

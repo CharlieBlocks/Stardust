@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 	}
 
 	for (size_t i = 0; i < meshCount; i++)
-		sd_FreeMesh(meshes);
+		sd_FreeMesh(&meshes[i]);
 
 	return 0;
 }

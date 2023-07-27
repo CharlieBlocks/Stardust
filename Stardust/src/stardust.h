@@ -11,20 +11,46 @@ DOCUMENTATION:
 	It's primary job is loading 3D files but this is set to expand to loading images
 
 	Function naming convention:
-		sd_ followed by the function name. Function names are written in camel case.
-		I.E -> sd_LoadMesh
+		All functions have a prefix containing their category followed by their name in camel case
+		Function Prefixes:
+			sd -> stardust function. Usually user facing
+			_post -> postprocessing function. Internal
+			_obj -> OBJ loader function. Internal
+			
+	Defined Types:
+		Stardust contains a couple of custom types to help with organistion
+
+		StardustMeshFlags -> unsigned integer to hold mesh flags
+		StardustErrorCode -> unsigned integer to hold error enums
+		StardustMeshDataType -> unsigned integer to hold the type of data in a mesh
+
+
+	StardustMesh Object:
+		Meshes are stored in StardustMesh structs. These contain the vertex and index arrays of the mesh
+		
+		StardustMeshDataType dataType -> The forms of data stored in the vertices. This includes normal data, vertex data, uv data, smoothing, etc...
+		Vertex* vertices -> The vertex array. This contains the mesh vertex data
+		uint32_t* indices -> The index array. This contains the mesh index data
+		uint32_t vertexCount -> The amount of vertices in the vertex array
+		uint32_t indexCount -> the amount of indices in the index array
+		uint32_t vertexStride -> The amount of indices per face.
+
 
 	Loading Meshes:
-		Loading Meshes is done by calling the sd_LoadMesh(const char* filepath, MeshLoadFlags flags) which will return a 
-		StardustMesh object.
+		Loading Meshes is done by calling the StardustErrorCode sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustMesh** meshes, size_t* count);
 
-		Once you have extracted the data from StardustMesh object the object can be deleted using the sd_FreeMesh(StardustMesh* mesh)
-		function
+		This function will load the given file and, if the format is supported, load it into an array of meshes.
+		The length of this array is given by meshCount and the array is placed in a pointer pointed to by meshes
+		The function returns a StardustErrorCode, if this is equal to STARDUST_ERROR_SUCCESS the operation completed succesfully
+		and the data inside can be trusted.
+
+	Deleting Meshes:
+		To delete a mesh call the sd_FreeMesh() function on the mesh. This works on individual meshes so ensure that every mesh in the returned array is deleted
 
 */
 
 // ================== Defines ================== //
-#define MAX_LINE_BUFFER_SIZE 256
+#define MAX_LINE_BUFFER_SIZE 256 //Maximum line size when reading files. Only applies to file formats that use EOLs
 
 // ================== Types ================== //
 #include <stdint.h>
@@ -36,7 +62,7 @@ enum MeshFlags
 	STARDUST_MESH_HARDEN_NORMALS = 1 << 1,			//Hardens any normals
 	STARDUST_MESH_SMOOTH_NORMALS = 1 << 2,			//Smooths any normals
 
-	STARDUST_MESH_IGNORE_UVS = 1 << 4,				//Doesn't load texture coordinates from file
+	STARDUST_MESH_IGNORE_TEXCOORDS = 1 << 4,				//Doesn't load texture coordinates from file
 
 	STARDUST_MESH_TRIANGULATE = 1 << 5,			//Triangulate mesh. Safe to call on pretriangulated meshes.
 	
@@ -56,18 +82,18 @@ enum MeshDataFlags
 
 enum ErrorCodes
 {
-	STARDUST_ERROR_SUCCESS = 1 << 0,
-	STARDUST_ERROR_FILE_NOT_FOUND = 1 << 1,
-	STARDUST_ERROR_FORMAT_NOT_SUPPORTED = 1 << 2,
-	STARDUST_ERROR_LINE_EXCCEDS_BUFFER = 1 << 3,
-	STARDUST_ERROR_FILE_INVALID = 1 << 4,
-	STARDUST_ERROR_IO_ERROR = 1 << 5,
-	STARDUST_ERROR_MEMORY_ERROR = 1 << 6
+	STARDUST_ERROR_SUCCESS = 0,
+	STARDUST_ERROR_FILE_NOT_FOUND = 1,
+	STARDUST_ERROR_FORMAT_NOT_SUPPORTED = 2,
+	STARDUST_ERROR_LINE_EXCCEDS_BUFFER = 3,
+	STARDUST_ERROR_FILE_INVALID = 4,
+	STARDUST_ERROR_IO_ERROR = 5,
+	STARDUST_ERROR_MEMORY_ERROR = 6
 };
 
 typedef unsigned int StardustMeshFlags;
 typedef unsigned int StardustErrorCode;
-typedef unsigned int StardustDataType;
+typedef unsigned int StardustMeshDataType;
 
 // ================== Structs ================== //
 typedef struct
@@ -92,7 +118,7 @@ typedef struct
 
 typedef struct 
 {
-	StardustDataType dataType;		//Types of data contained in the mesh
+	StardustMeshDataType dataType;		//Types of data contained in the mesh
 
 	Vertex*			vertices;		//Vertex array
 	uint32_t*		indices;		//Index Array	
@@ -129,5 +155,6 @@ STARDUST_FUNC int sd_CompareVertexPosition(Vertex* a, Vertex* b);
 STARDUST_FUNC int sd_CompareVertex(Vertex* a, Vertex* b);
 
 //Error Functions
+STARDUST_FUNC const char* sd_TranslateError(StardustErrorCode error);
 
 #endif //_STARDUST_HEADER

@@ -22,13 +22,6 @@ StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFl
 	//Normal Generation / Normal Hardening
 	if ((flags & STARDUST_MESH_GENERATE_NORMALS) == STARDUST_MESH_GENERATE_NORMALS)
 	{
-		//Check that mesh is triangulated
-		if (mesh->vertexStride != 3)
-		{
-			ret = _post_TriangulateMeshEC(mesh); //If not, triangulate
-			if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
-		}
-
 		ret = _post_GenerateNormals(mesh);
 		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
 	}
@@ -36,6 +29,12 @@ StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFl
 	//Normal Smoothing
 	if ((flags & STARDUST_MESH_SMOOTH_NORMALS) == STARDUST_MESH_SMOOTH_NORMALS && (mesh->dataType & STARDUST_SMOOTHSHADING) != STARDUST_SMOOTHSHADING)
 	{
+		if ((mesh->dataType & STARDUST_NORMAL_DATA) != STARDUST_NORMAL_DATA) //Generate normal data if need be
+		{
+			ret = _post_GenerateNormals(mesh);
+			if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+		}
+
 		ret = _post_SmoothNormals(mesh); //Smooth normals if flag is present and mesh does not contain smooth normals
 		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
 	}
@@ -152,6 +151,13 @@ StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 
 StardustErrorCode _post_GenerateNormals(StardustMesh* mesh)
 {
+	//Check that mesh is triangulated
+	if (mesh->vertexStride != 3)
+	{
+		StardustErrorCode ret = _post_TriangulateMeshEC(mesh); //If not, triangulate
+		if (ret != STARDUST_ERROR_SUCCESS) { return ret; }
+	}
+
 	//Loop by face.
 	uint32_t vertexCount = 0;
 	uint32_t indexCount = 0;

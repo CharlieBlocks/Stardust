@@ -404,7 +404,7 @@ void _obj_RemoveTags(OBJObject* objects, size_t objectCount, StardustMeshFlags f
 {
 	unsigned int ignoreOBJTags = 0;
 
-	if ((flags & STARDUST_MESH_IGNORE_UVS) != 0)
+	if ((flags & STARDUST_MESH_IGNORE_TEXCOORDS) != 0)
 		ignoreOBJTags |= OBJTAG_TEXCOORD;
 
 	if ((flags & STARDUST_MESH_IGNORE_NORMALS) != 0)

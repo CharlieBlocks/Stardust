@@ -113,3 +113,26 @@ STARDUST_FUNC int sd_CompareVertex(Vertex* a, Vertex* b)
 
 }
 
+STARDUST_FUNC const char* sd_TranslateError(StardustErrorCode error)
+{
+	switch (error)
+	{
+	case STARDUST_ERROR_SUCCESS:
+		return "Operation Succesfull";
+	case STARDUST_ERROR_FILE_NOT_FOUND:
+		return "File not found";
+	case STARDUST_ERROR_FORMAT_NOT_SUPPORTED:
+		return "Object format is not supported";
+	case STARDUST_ERROR_LINE_EXCCEDS_BUFFER:
+		return "Object file excceded line buffer. Too much precision?";
+	case STARDUST_ERROR_FILE_INVALID:
+		return "Object file invalid. Corrupted or saved incorrectly?";
+	case STARDUST_ERROR_IO_ERROR:
+		return "IO error";
+	case STARDUST_ERROR_MEMORY_ERROR:
+		return "Memory Error. Failed to allocate memory through malloc";
+	}
+
+	return "Unknown Error";
+}
+
