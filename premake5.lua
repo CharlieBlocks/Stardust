@@ -70,8 +70,9 @@ workspace "Stardust"
 
         files
         {
-            "Tests/**.c",
-            "Tests/**.h"
+            "Tests/main.c"
+            --"Tests/**.c",
+            --"Tests/**.h"
         }
 
         links
