@@ -1,7 +1,7 @@
 #ifndef _STARDUST_OBJ_LOADER
 #define _STARDUST_OBJ_LOADER
 
-#include "../stardust.h"
+#include "stardust.h"
 
 #include <stdio.h>
 
@@ -56,17 +56,17 @@ typedef struct
 
 //Functions
 
-StardustErrorCode _obj_LoadMesh(const char* file, StardustMeshFlags flags, StardustMesh** mesh, size_t* count);
+StardustErrorCode _obj_LoadMesh(const char* file, const StardustMeshFlags flags, StardustMesh** mesh, size_t* count);
 
-OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount, int useFirstMesh);
+OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount, const int useFirstMesh);
 StardustErrorCode _obj_AllocateTagArrays(OBJTags* tags);
 
-void _obj_RemoveTags(OBJObject* objects, size_t objectCount, StardustMeshFlags flags);
+void _obj_RemoveTags(OBJObject* objects, const size_t objectCount, const StardustMeshFlags flags);
 
-StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, size_t objectCount);
-StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, size_t objectCount);
+StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, const size_t objectCount);
+StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, const size_t objectCount);
 
-void _obj_ParseVector(char** string, float* arr, uint32_t elemCount);
+void _obj_ParseVector(char** string, float* arr, const uint32_t elemCount);
 
 uint32_t _obj_GetHash(char* string, OBJTags* tags);
 int _obj_HashInArray(uint32_t* arr, size_t arrSize, uint32_t hash);

@@ -5,10 +5,10 @@
 #include <locale.h>
 #include <math.h>
 
-#include "../filetools.h"
+#include "filetools.h"
 
 
-StardustErrorCode _obj_LoadMesh(const char* filename, StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount)
+StardustErrorCode _obj_LoadMesh(const char* filename, const StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount)
 {
 	StardustErrorCode result;
 
@@ -19,8 +19,8 @@ StardustErrorCode _obj_LoadMesh(const char* filename, StardustMeshFlags flags, S
 	//Check that the file was opened
 	if (fileRet != 0)
 		return STARDUST_ERROR_IO_ERROR;
-
 	
+
 	// ---------------- Find OBJ tags and tag counts ---------------- //
 	size_t objectCount;
 	OBJObject* objects = _obj_GetObjects(fileHandle, &result, &objectCount, (flags & STARDUST_MESH_USE_FIRST_MESH) == STARDUST_MESH_USE_FIRST_MESH);
@@ -92,10 +92,11 @@ StardustErrorCode _obj_LoadMesh(const char* filename, StardustMeshFlags flags, S
 	_obj_FreeObjects(objects, objectCount);
 	fclose(fileHandle);
 
+
 	return result;
 }
 
-OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount, int useFirstMesh)
+OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* objectCount, const int useFirstMesh)
 {
 	// Predefine Variables //
 	char buffer[MAX_LINE_BUFFER_SIZE]; //Buffer
@@ -400,7 +401,7 @@ StardustErrorCode _obj_AllocateTagArrays(OBJTags* tags)
 	return STARDUST_ERROR_SUCCESS;
 }
 
-void _obj_RemoveTags(OBJObject* objects, size_t objectCount, StardustMeshFlags flags)
+void _obj_RemoveTags(OBJObject* objects, const size_t objectCount, const StardustMeshFlags flags)
 {
 	unsigned int ignoreOBJTags = 0;
 
@@ -414,7 +415,7 @@ void _obj_RemoveTags(OBJObject* objects, size_t objectCount, StardustMeshFlags f
 		objects[i].tags->tags &= ~ignoreOBJTags;
 }
 
-StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, size_t objectCount)
+StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, const size_t objectCount)
 {
 	// Define variables //
 	char buffer[MAX_LINE_BUFFER_SIZE]; //Ignmoring EOL checks since they were done by _obj_GetObjects
@@ -498,7 +499,7 @@ StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, size_t obj
 	return STARDUST_ERROR_SUCCESS;
 }
 
-StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, size_t objectCount)
+StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, const size_t objectCount)
 {
 	for (int i = 0; i < objectCount; i++)
 	{
@@ -585,7 +586,7 @@ StardustErrorCode _obj_FillMeshes(StardustMesh* meshes, OBJObject* objects, size
 	return STARDUST_ERROR_SUCCESS;
 }
 
-void _obj_ParseVector(char** string, float* arr, uint32_t elemCount)
+void _obj_ParseVector(char** string, float* arr, const uint32_t elemCount)
 {
 	for (uint32_t i = 0; i < elemCount; i++)
 		arr[i] = (float)strtod(string[i + 1], NULL);

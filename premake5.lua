@@ -32,7 +32,7 @@ workspace "Stardust"
 
         includedirs
         {
-            "src"
+            "./src"
         }
 
         buildoptions

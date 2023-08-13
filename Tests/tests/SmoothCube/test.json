@@ -1,0 +1,8 @@
+{
+    "name" : "Smooth Normals",
+
+    "includedirs" : ["..\\Stardust\\src"],
+    "linkdirs" : ["..\\Stardust\\bin\\Debug"],
+    "links" : ["Stardust.lib"],
+    "defines" : ["_UNICODE", "UNICODE"]
+}

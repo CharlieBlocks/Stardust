@@ -1,0 +1,8 @@
+{
+    "name" : "Load OBJ",
+
+    "includedirs" : ["..\\Stardust\\src"],
+    "linkdirs" : ["..\\Stardust\\bin\\Debug"],
+    "links" : ["Stardust.lib"],
+    "defines" : ["_UNICODE", "UNICODE"]
+}

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <assert.h>
+
 int sd_FileExists(const char* file)
 {
 	struct stat buffer;
@@ -92,3 +94,205 @@ void sd_FreeStringArray(char** str, size_t count)
 
 	free(str);
 }
+
+StardustErrorCode sd_CreateFileStream(const char* file, FileStream** stream)
+{
+	*stream = malloc(sizeof(FileStream));
+	if (*stream == 0)
+		return STARDUST_ERROR_MEMORY_ERROR;
+
+	errno_t error = fopen_s(&(*stream)->file, file, "rb");
+
+	if (error != 0)
+		return STARDUST_ERROR_IO_ERROR;
+
+	(*stream)->characterIndex = 0;
+
+	fseek((*stream)->file, 0, SEEK_END);
+	(*stream)->eof = ftell((*stream)->file);
+	fseek((*stream)->file, 0, SEEK_SET);
+
+	return STARDUST_ERROR_SUCCESS;
+}
+
+void sd_CloseStream(FileStream* stream)
+{
+	fclose(stream->file);
+
+	free(stream);
+}
+
+char sd_GetCharacter(FileStream* stream)
+{
+	char c;
+	size_t eof = fread(&c, 1, 1, stream->file);
+
+	stream->characterIndex++;
+
+	return c;
+}
+
+StardustErrorCode sd_StreamGet(FileStream* stream, char* buffer, uint32_t count)
+{
+	//fgets(buffer, count, stream->file);
+	size_t out = fread(buffer, 1, count, stream->file);
+
+	stream->characterIndex += count;
+
+	return STARDUST_ERROR_SUCCESS;
+}
+
+//TODO: ADD ERROR CHECKING
+char* sd_GetRange(FileStream* stream, uint32_t len)
+{
+	char* str = malloc(sizeof(char) * len);
+	assert(str);
+
+	fread(str, 1, len, stream->file);
+
+	stream->characterIndex += len;
+
+	return str;
+}
+
+void sd_ReverseArray(char* arr, uint32_t len)
+{
+	for (uint32_t i = 0; i < len / 2; i++)
+	{
+		int inverse = len - i - 1;
+		char temp = arr[i];
+		arr[i] = arr[inverse];
+		arr[inverse] = temp;
+	}
+}
+
+int8_t sd_GetInt8(FileStream* stream)
+{
+	char c = sd_GetCharacter(stream);
+	return (int8_t)c;
+}
+
+int16_t sd_GetInt16(FileStream* stream)
+{
+	int16_t val;
+	sd_StreamGet(stream, (char*)&val, 2);
+
+	return val;
+}
+
+int32_t sd_GetInt32(FileStream* stream)
+{
+	int32_t val;
+	sd_StreamGet(stream, (char*)&val, 4);
+
+	return val;
+}
+
+float sd_GetFloat(FileStream* stream)
+{
+	float val;
+	sd_StreamGet(stream, (char*)&val, 4);
+
+	return val;
+}
+
+double sd_GetDouble(FileStream* stream)
+{
+	double val;
+	sd_StreamGet(stream, (char*)&val, 8);
+
+	return val;
+}
+
+int64_t sd_GetInt64(FileStream* stream)
+{
+	int64_t val;
+	sd_StreamGet(stream, (char*)&val, 8);
+
+	return val;
+}
+
+uint32_t sd_GetUint32(FileStream* stream)
+{
+	uint32_t val;
+	sd_StreamGet(stream, (char*)&val, 4);
+
+	return val;
+}
+
+uint64_t sd_GetUint64(FileStream* stream)
+{
+	uint64_t val;
+	sd_StreamGet(stream, (char*)&val, 8);
+
+	return val;
+}
+
+float* sd_GetFloatArr(FileStream* stream, uint32_t size)
+{
+	/*float* arr = malloc(sizeof(float) * size);
+	assert(arr != 0);
+
+	for (uint32_t i = 0; i < size; i++)
+		arr[i] = sd_GetFloat(stream);*/
+	
+	float* arr = malloc(sizeof(float) * size);
+	assert(arr != 0);
+
+	sd_StreamGet(stream, (char*)arr, size * 4);
+	
+	return arr;
+}
+
+double* sd_GetDoubleArr(FileStream* stream, uint32_t size)
+{
+	double* arr = malloc(sizeof(double) * size);
+	assert(arr != 0);
+
+	//for (uint32_t i = 0; i < size; i++)
+	//	arr[i] = sd_GetDouble(stream);
+
+	sd_StreamGet(stream, (char*)arr, size * 8);
+
+	return arr;
+}
+
+int32_t* sd_GetIntArr(FileStream* stream, uint32_t size)
+{
+	int32_t* arr = malloc(sizeof(int32_t) * size);
+	assert(arr != 0);
+
+	//for (uint32_t i = 0; i < size; i++)
+	//	arr[i] = sd_GetInt32(stream);
+
+	sd_StreamGet(stream, (char*)arr, size * 4);
+
+	return arr;
+}
+
+int64_t* sd_GetLongArr(FileStream* stream, uint32_t size)
+{
+	int64_t* arr = malloc(sizeof(int64_t) * size);
+	assert(arr != 0);
+
+	//for (uint32_t i = 0; i < size; i++)
+		//arr[i] = sd_GetInt64(stream);
+
+	sd_StreamGet(stream, (char*)arr, size * 8);
+
+	return arr;
+}
+
+int8_t* sd_GetBoolArr(FileStream* stream, uint32_t size)
+{
+	int8_t* arr = malloc(sizeof(int8_t) * size);
+	assert(arr != 0);
+
+	//for (uint32_t i = 0; i < size; i++)
+	//	arr[i] = sd_GetInt8(stream);
+
+	sd_StreamGet(stream, (char*)arr, size);
+
+	return arr;
+}
+

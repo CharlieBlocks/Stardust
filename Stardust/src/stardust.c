@@ -3,15 +3,18 @@
 #include "postprocessing.h"
 
 //Loaders
-#include "loaders/OBJLoader.h"
+#include "formats/obj/OBJLoader.h"
+#include "formats/fbx/fbx.h"
 
 //STD
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "timing.h"
 
-StardustErrorCode sd_LoadMesh(const char* filename, StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount)
+
+StardustErrorCode sd_LoadMesh(const char* filename, const StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount)
 {
 	StardustErrorCode ret;
 
@@ -37,6 +40,10 @@ StardustErrorCode sd_LoadMesh(const char* filename, StardustMeshFlags flags, Sta
 	{
 		ret = _obj_LoadMesh(filename, flags, meshes, meshCount);
 	}
+	else if (strcmp(ext, "fbx") == 0)
+	{
+		ret = _fbx_LoadMesh(filename, flags, meshes, meshCount);
+	}
 	else
 		return STARDUST_ERROR_FORMAT_NOT_SUPPORTED;
 
@@ -50,8 +57,8 @@ StardustErrorCode sd_LoadMesh(const char* filename, StardustMeshFlags flags, Sta
 
 	sd_FreeStringArray(splitString, stringElem);
 	free(filenameBuffer);
-	
 
+	
 	//Perform post processing
 	for (size_t i = 0; i < *meshCount; i++)
 	{

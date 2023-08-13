@@ -47,10 +47,9 @@ StardustErrorCode _post_PerformPostProcessing(StardustMesh* mesh, StardustMeshFl
 StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 {
 	// Create index list of simillar position vertices //
-	
 	uint32_t bucketCount = 0;
 	
-	//Set buckets for wost case scenario
+	//Set buckets for worst case scenario
 	NormalPosition** normalBuckets = malloc(mesh->vertexCount * sizeof(NormalPosition*)); //Assume that every vertex is different
 	if (normalBuckets == 0) { return STARDUST_ERROR_MEMORY_ERROR; }
 	uint32_t* bucketSizes = malloc(mesh->vertexCount * sizeof(uint32_t));
@@ -58,6 +57,7 @@ StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 
 	memset(normalBuckets, 0, mesh->vertexCount * sizeof(Vertex*));
 	memset(bucketSizes, 0, mesh->vertexCount * sizeof(uint32_t));
+
 
 	for (uint32_t i = 0; i < mesh->vertexCount; i++)
 	{
@@ -130,6 +130,7 @@ StardustErrorCode _post_SmoothNormals(StardustMesh* mesh)
 			mesh->vertices[normalBuckets[i][j].index].normZ = totalZ;
 		}
 	}
+
 
 	mesh->dataType |= STARDUST_SMOOTHSHADING;
 
@@ -240,6 +241,7 @@ StardustErrorCode _post_GenerateNormals(StardustMesh* mesh)
 
 	//Shrink vertices
 	_post_RecomputeIndexArray(mesh);
+
 
 	return STARDUST_ERROR_SUCCESS;
 }
