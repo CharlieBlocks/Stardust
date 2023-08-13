@@ -33,27 +33,28 @@ StardustErrorCode _fbx_LoadMesh(const char* path, const StardustMeshFlags flags,
 
 	//Predfined vars
 	StardustErrorCode ret;	//	Return code
-	FileStream* stream;		//	File stream
+	FileStream stream;		//	File stream
 
 	uint32_t fbxVersion;	//	FBX version number
 
 	// Open File Stream //
-	ret = sd_CreateFileStream(path, &stream);
+	//ret = sd_CreateFileStream(path, &stream);
+	ret = fs_OpenStream(path, &stream);
 	if (ret != 0) //0 is the value of STARDUST_ERROR_SUCCESS
 		return ret;
 
 	// Validate header //
-	ret = _fbx_GetHeader(stream, &fbxVersion);
+	ret = _fbx_GetHeader(&stream, &fbxVersion);
 	if (ret != 0)
 		return ret;
 
 	// Create root Node
 	struct FBXNode globalNode;
-	ret = _fbx_GetGlobalNode(stream, &globalNode);
+	ret = _fbx_GetGlobalNode(&stream, &globalNode);
 
 	//Close
 	_fbx_FreeGlobalNode(&globalNode);
-	sd_CloseStream(stream);
+	fs_CloseStream(&stream);
 
 	return STARDUST_ERROR_SUCCESS;
 }
@@ -61,8 +62,9 @@ StardustErrorCode _fbx_LoadMesh(const char* path, const StardustMeshFlags flags,
 StardustErrorCode _fbx_GetHeader(FileStream* stream, uint32_t* version)
 {
 	char header[23];
-	sd_StreamGet(stream, header, 23);
-	//char* header = sd_GetRange(stream, 23);
+	StardustErrorCode ret = fs_ReadBytes(stream, header, 23);
+	if (ret != 0)
+		return ret;
 
 	//Compare header
 	int match = 1;
@@ -73,7 +75,7 @@ StardustErrorCode _fbx_GetHeader(FileStream* stream, uint32_t* version)
 		return STARDUST_ERROR_FILE_INVALID;
 
 	//Get version number
-	uint32_t ver = sd_GetUint32(stream);
+	uint32_t ver = fs_ReadUint32(stream);
 
 	if (ver > MAX_FBX_VER || ver < MIN_FBX_VER)
 		return STARDUST_ERROR_FILE_INVALID;
@@ -85,8 +87,6 @@ StardustErrorCode _fbx_GetHeader(FileStream* stream, uint32_t* version)
 
 StardustErrorCode _fbx_GetGlobalNode(FileStream* stream, struct FBXNode* globalNode)
 {
-	printf("%" PRIu64 "\n", stream->characterIndex);
-
 	//Fill global node
 	globalNode->endOffset = 0;
 	globalNode->propertyCount = 0;
@@ -135,7 +135,6 @@ StardustErrorCode _fbx_GetGlobalNode(FileStream* stream, struct FBXNode* globalN
 		}
 
 		globalNode->children[globalNode->childCount - 1] = childNode;
-		printf("%" PRIu64 "\n", stream->characterIndex);
 	}
 
 	return result;
@@ -144,12 +143,20 @@ StardustErrorCode _fbx_GetGlobalNode(FileStream* stream, struct FBXNode* globalN
 struct FBXNode* _fbx_GetNode(FileStream* stream, StardustErrorCode* result)
 {
 	// Read node header
-	uint32_t endOffset = sd_GetUint32(stream);	//Distance from beginning of file to end of this node
-	uint32_t propCount = sd_GetUint32(stream);	//Number of properties
-	uint32_t propLen = sd_GetUint32(stream);	//Property size in bytes
-	int8_t nameLen = sd_GetInt8(stream);		//Length of the name in bytes
+	uint32_t endOffset = fs_ReadUint32(stream);	//Distance from beginning of file to end of this node
+	uint32_t propCount = fs_ReadUint32(stream);	//Number of properties
+	uint32_t propLen = fs_ReadUint32(stream);	//Property size in bytes
+	int8_t nameLen = fs_ReadInt8(stream);		//Length of the name in bytes
 
-	char* nodeName = sd_GetRange(stream, nameLen); //Get name
+	char* nodeName = malloc(nameLen);
+	if (nodeName == 0)
+	{
+		*result = STARDUST_ERROR_MEMORY_ERROR;
+		return 0;
+	}
+	*result = fs_ReadBytes(stream, nodeName, nameLen);
+	if (*result != 0)
+		return 0;
 
 	// Create node
 	struct FBXNode* node = malloc(sizeof(struct FBXNode));
@@ -214,29 +221,36 @@ struct FBXNode* _fbx_GetNode(FileStream* stream, StardustErrorCode* result)
 	}
 
 	if (node->childCount != 0)
-		free(sd_GetRange(stream, 13));
+	{
+		f_Seek(stream->file, 13, FileOrigin_Current);
+		stream->characterIndex += 13;
+	}
 
 	return node;
-
 }
 
 StardustErrorCode _fbx_GetProperty(FileStream* stream, FBXProperty* prop)
 {
 	//Get type
-	char type = sd_GetCharacter(stream);
+	char type;
+	fs_ReadBytes(stream, &type, 1);
+
 	prop->type = FBXPropertyDict[(int8_t)type]; //Use ASCII value of type for dict index
 	prop->length = 1;
-	//prop->enc = 0;
+
+	//Validate type
+	if (prop->type < 0 || prop->type > 12)
+		return STARDUST_ERROR_FILE_INVALID;
 
 	//Check if type is non-trivial
 	if (prop->type > 5) //String or raw
 	{
-		prop->length = sd_GetUint32(stream);
+		prop->length = fs_ReadUint32(stream);
 
 		if (prop->type < 10)
 		{
-			prop->enc = (int8_t)sd_GetUint32(stream);
-			prop->compLen = sd_GetUint32(stream);
+			prop->enc = (int8_t)fs_ReadUint32(stream);
+			prop->compLen = fs_ReadUint32(stream);
 		}
 		else
 			prop->enc = 0;
@@ -248,98 +262,16 @@ StardustErrorCode _fbx_GetProperty(FileStream* stream, FBXProperty* prop)
 		if (prop->rawArr == 0)
 			return STARDUST_ERROR_MEMORY_ERROR;
 
-		sd_StreamGet(stream, prop->rawArr, prop->compLen);
-	}
-	else
-	{
-		prop->raw = malloc(prop->length * _fbx_Sizes[prop->type]);
-		if (prop->raw == 0)
-			return STARDUST_ERROR_MEMORY_ERROR;
-
-		sd_StreamGet(stream, prop->raw, prop->length * _fbx_Sizes[prop->type]);
+		StardustErrorCode ret = fs_ReadBytes(stream, prop->rawArr, prop->compLen);
+		return ret;
 	}
 
+	prop->raw = malloc(prop->length * _fbx_Sizes[prop->type]);
+	if (prop->raw == 0)
+		return STARDUST_ERROR_MEMORY_ERROR;
 
-	return STARDUST_ERROR_SUCCESS;
-
-	/*//Get type character
-	char type = sd_GetCharacter(stream);
-
-	if (type == 'Y')
-	{
-		prop->i16 = sd_GetInt16(stream);
-		return;
-	}
-	else if (type == 'C')
-	{
-		prop->b = sd_GetInt8(stream);
-		return;
-	}
-	else if (type == 'I')
-	{
-		prop->i32 = sd_GetInt32(stream);
-		return;
-	}
-	else if (type == 'F')
-	{
-		prop->f = sd_GetFloat(stream);
-		return;
-	}
-	else if (type == 'D')
-	{
-		prop->d = sd_GetDouble(stream);
-		return;
-	}
-	else if (type == 'L')
-	{
-		prop->i64 = sd_GetInt64(stream);
-		return;
-	}
-
-	prop->length = sd_GetUint32(stream);
-
-	if (type == 'S')
-	{
-		prop->strArr = sd_GetUint32(stream);
-		return;
-	}
-	else if (type == 'R')
-	{
-		prop->rawArr = sd_GetUin32(stream);
-		return;
-	}
-
-	prop->enc = (int8_t)sd_GetUint32(stream);
-	prop->compLen = sd_GetUint32(stream);
-
-	if (prop->enc == 1)
-	{
-		prop->rawArr = sd_GetBoolArr(stream, prop->compLen); //GetBoolArr reads in individual bytes.
-		return;
-	}
-
-	if (type == 'f')
-	{
-		prop->fArr = sd_GetFloatArr(stream, prop->length);
-	}
-	else if (type == 'd')
-	{
-		prop->dArr = sd_GetDoubleArr(stream, prop->length);
-	}
-	else if (type == 'l')
-	{
-		prop->i64Arr = sd_GetLongArr(stream, prop->length);
-	}
-	else if (type == 'i')
-	{
-		prop->i32 = sd_GetIntArr(stream, prop->length);
-	}
-	else if (type == 'b')
-	{
-		prop->bArr = sd_GetBoolArr(stream, prop->length);
-	}
-
-	return STARDUST_ERROR_SUCCESS;*/
+	StardustErrorCode ret = fs_ReadBytes(stream, prop->raw, prop->length * _fbx_Sizes[prop->type]);
+	return ret;
 }
 
 void _fbx_FreeGlobalNode(struct FBXNode* node)

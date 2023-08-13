@@ -5,8 +5,7 @@
 #include <locale.h>
 #include <math.h>
 
-#include "filetools.h"
-
+#include "utils/string_tools.h"
 
 StardustErrorCode _obj_LoadMesh(const char* filename, const StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount)
 {
@@ -118,8 +117,8 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 		}
 
 		//Split line by spaces
-		size_t splitCount;
-		char** splitLine = sd_SplitString(buffer, ' ', &splitCount);
+		unsigned long long splitCount;
+		char** splitLine = s_SplitString(buffer, ' ', &splitCount);
 
 		//Get prefix
 		char* prefix = splitLine[0];
@@ -302,13 +301,13 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 			for (uint32_t i = 0; i < objects[currentObject].tags->elementsPerFace; i++)
 			{
 				size_t indiceCount;
-				char** indiceSplit = sd_SplitString(splitLine[i + 1], '/', &indiceCount);
+				char** indiceSplit = s_SplitString(splitLine[i + 1], '/', &indiceCount);
 
 				//Check that it is within bounds
 				if (indiceCount > 3)
 				{
 					*result = STARDUST_ERROR_FILE_INVALID;
-					sd_FreeStringArray(indiceSplit, indiceCount);
+					s_FreeStringArray(indiceSplit, indiceCount);
 					return 0;
 				}
 
@@ -319,11 +318,11 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 					if (indiceCount != objects[currentObject].tags->indicesPerVertex)
 					{
 						*result = STARDUST_ERROR_FILE_INVALID;
-						sd_FreeStringArray(indiceSplit, indiceCount);
+						s_FreeStringArray(indiceSplit, indiceCount);
 						return 0;
 					}
 				}
-				sd_FreeStringArray(indiceSplit, indiceCount);
+				s_FreeStringArray(indiceSplit, indiceCount);
 			}
 
 		}
@@ -352,7 +351,7 @@ OBJObject* _obj_GetObjects(FILE* file, StardustErrorCode* result, size_t* object
 		{
 			//NOT SUPPORTED YET
 		}
-		sd_FreeStringArray(splitLine, splitCount);
+		s_FreeStringArray(splitLine, splitCount);
 	} //while (fgets(buffer, sizeof(buffer), file))
 
 	*result = STARDUST_ERROR_SUCCESS;
@@ -431,7 +430,7 @@ StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, const size
 
 		//Split line by spaces
 		size_t splitCount;
-		char** splitLine = sd_SplitString(buffer, ' ', &splitCount);
+		char** splitLine = s_SplitString(buffer, ' ', &splitCount);
 
 		//Get prefix
 		char* prefix = splitLine[0];
@@ -492,7 +491,7 @@ StardustErrorCode _obj_FillObjectData(FILE* file, OBJObject* objects, const size
 		}
 
 
-		sd_FreeStringArray(splitLine, splitCount);
+		s_FreeStringArray(splitLine, splitCount);
 
 	} // while (fgets(buffer, sizeof(buffer), file))
 
@@ -595,7 +594,7 @@ void _obj_ParseVector(char** string, float* arr, const uint32_t elemCount)
 uint32_t _obj_GetHash(char* string, OBJTags* tags)
 {
 	size_t indiceCount = 0;
-	char** splitLine = sd_SplitString(string, '/', &indiceCount);
+	char** splitLine = s_SplitString(string, '/', &indiceCount);
 
 	uint32_t hash = 0;
 
@@ -618,7 +617,7 @@ uint32_t _obj_GetHash(char* string, OBJTags* tags)
 		hash = (nI * tags->texCoordTagCount * tags->vertexTagCount) + (tI * tags->vertexTagCount) + vI;
 	}
 
-	sd_FreeStringArray(splitLine, indiceCount);
+	s_FreeStringArray(splitLine, indiceCount);
 
 	return hash;
 }

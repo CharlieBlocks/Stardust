@@ -1,5 +1,4 @@
 #include "stardust.h"
-#include "filetools.h"
 #include "postprocessing.h"
 
 //Loaders
@@ -11,6 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "utils/file.h"
+#include "utils/string_tools.h"
 #include "timing.h"
 
 
@@ -19,7 +20,7 @@ StardustErrorCode sd_LoadMesh(const char* filename, const StardustMeshFlags flag
 	StardustErrorCode ret;
 
 	//Check that file exists
-	if (sd_FileExists(filename) == 0)
+	if (f_FileExists(filename) != 0)
 		return STARDUST_ERROR_FILE_NOT_FOUND;
 
 	//Extract filename
@@ -29,7 +30,7 @@ StardustErrorCode sd_LoadMesh(const char* filename, const StardustMeshFlags flag
 	strcpy_s(filenameBuffer, strlen(filename) + 1, filename);
 
 	size_t stringElem;
-	char** splitString = sd_SplitString(filenameBuffer, '.', &stringElem);
+	char** splitString = s_SplitString(filenameBuffer, '.', &stringElem);
 
 	if (splitString == 0)
 		return STARDUST_ERROR_FILE_NOT_FOUND;
@@ -49,13 +50,13 @@ StardustErrorCode sd_LoadMesh(const char* filename, const StardustMeshFlags flag
 
 	if (ret != STARDUST_ERROR_SUCCESS)
 	{
-		sd_FreeStringArray(splitString, stringElem);
+		s_FreeStringArray(splitString, stringElem);
 		free(filenameBuffer);
 
 		return ret;
 	}
 
-	sd_FreeStringArray(splitString, stringElem);
+	s_FreeStringArray(splitString, stringElem);
 	free(filenameBuffer);
 
 	

@@ -46,7 +46,7 @@ workspace "Stardust"
 
             defines
             {
-                "_STARDUST_WIN"
+                "_STARDUST_WIN32"
             }
 
         filter "configurations:Debug"

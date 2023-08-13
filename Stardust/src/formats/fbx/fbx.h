@@ -104,7 +104,8 @@ Loading flow
 */
 
 #include "stardust.h"
-#include "filetools.h"
+#include "utils/filestream.h"
+//#include "filetools.h"
 
 #define MIN_FBX_VER 7100
 #define MAX_FBX_VER 7400
