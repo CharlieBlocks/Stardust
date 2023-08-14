@@ -1,8 +1,10 @@
 #include "stardust.h"
-#include "utils/file.h"
+
+#include "zlib/huffman_tree.h"
 
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
 
 int main(int argc, char* argv[])
 {
