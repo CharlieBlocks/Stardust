@@ -1,6 +1,6 @@
 #include "stardust.h"
 
-#include "zlib/huffman_tree.h"
+#include "zlib/zlib.h"
 
 #include <stdio.h>
 #include <time.h>

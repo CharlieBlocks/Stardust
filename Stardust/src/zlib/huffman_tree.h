@@ -13,7 +13,7 @@ Documentation:
 struct HuffmanLeaf;
 struct HuffmanLeaf
 {
-	char symbol;
+	int symbol;
 
 	struct HuffmanLeaf* left;
 	struct HuffmanLeaf* right;
@@ -30,7 +30,7 @@ typedef struct HuffmanLeaf HuffmanNode;
 /// <param name="codewordLen">The length of the codeword (in bits)</param>
 /// <param name="symbol">The symbol to insert</param>
 /// <returns>STARDUST_ERROR_SUCCESS if ok</returns>
-StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, const int codewordLen, char symbol);
+StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, const int codewordLen, int symbol);
 
 /// <summary>
 /// Derives a huffman tree from the symbols and their corresponding bit lengths.
@@ -40,7 +40,7 @@ StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, const int code
 /// <param name="symbols">An array of chars that have a symbol corresponding to a bit length</param>
 /// <param name="count">The length of the given arrays. Arrays should be at least the same length</param>
 /// <returns>A Huffman node which is the root of the derived tree</returns>
-HuffmanNode* DeriveTreeFromBitLengths(unsigned int* bitLengths, char* symbols, const int count);
+HuffmanNode* DeriveTreeFromBitLengths(const unsigned int* bitLengths, const int* symbols, const int count);
 
 /// <summary>
 /// Decodes a symbol from the given bitstream
@@ -48,7 +48,7 @@ HuffmanNode* DeriveTreeFromBitLengths(unsigned int* bitLengths, char* symbols, c
 /// <param name="root">The root node of the tree</param>
 /// <param name="stream">A bit stream containing encoded data</param>
 /// <returns>The symbol</returns>
-char DecodeFromTree(HuffmanNode* root, BitStream* stream);
+int DecodeFromTree(HuffmanNode* root, BitStream* stream);
 
 /// <summary>
 /// Free's the given tree from memory

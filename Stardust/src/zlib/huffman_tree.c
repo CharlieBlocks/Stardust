@@ -1,7 +1,7 @@
 #include "huffman_tree.h"
 #include <stdlib.h>
 
-StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, int codewordLength, char symbol)
+StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, int codewordLength, int symbol)
 {
 	for (int i = codewordLength - 1; i >= 0; i--)
 	{
@@ -36,25 +36,25 @@ StardustErrorCode InsertIntoTree(HuffmanNode* root, int codeword, int codewordLe
 	return STARDUST_ERROR_SUCCESS;
 }
 
-HuffmanNode* DeriveTreeFromBitLengths(unsigned int* bitLengths, char* symbols, const int count)
+HuffmanNode* DeriveTreeFromBitLengths(const unsigned int* bitLengths, const int* symbols, const int count)
 {
 	// Calculate the longest bitlength //
-	int maxBitLen = 0;
+	unsigned int maxBitLen = 0;
 	for (int i = 0; i < count; i++)
 		if (bitLengths[i] > maxBitLen)
 			maxBitLen = bitLengths[i];
 
 	// Compute the number of codes for each bitlength //
-	int* bitLengthCounts = malloc(sizeof(int) * (maxBitLen + 1)); //Allocate array
+	int* bitLengthCounts = malloc(sizeof(unsigned int) * (maxBitLen + 1)); //Allocate array
 	if (bitLengthCounts == 0)
 		return 0;
 
 	//Sum up all bit lengths
-	for (int i = 0; i < maxBitLen + 1; i++)
+	for (unsigned int i = 0; i < maxBitLen + 1; i++)
 	{
 		bitLengthCounts[i] = 0;
 		for (int j = 0; j < count; j++)
-			bitLengthCounts[i] += bitLengths[j] == i && i != 0;
+			bitLengthCounts[i] += (bitLengths[j] == i) && (i != 0);
 	}
 
 	// Create nextCodes //
@@ -65,8 +65,9 @@ HuffmanNode* DeriveTreeFromBitLengths(unsigned int* bitLengths, char* symbols, c
 	nextCodes[0] = 0;
 	nextCodes[1] = 0;
 
-	for (int i = 2; i < maxBitLen + 1; i++)
+	for (unsigned int i = 2; i < maxBitLen + 1; i++)
 		nextCodes[i] = (nextCodes[i - 1] + bitLengthCounts[i - 1]) << 1;
+
 
 
 	//Create Huffman tree
@@ -84,14 +85,17 @@ HuffmanNode* DeriveTreeFromBitLengths(unsigned int* bitLengths, char* symbols, c
 		nextCodes[bitLen]++;
 	}
 
+	free(bitLengthCounts);
+	free(nextCodes);
+
 	return tree;
 }
 
-char DecodeFromTree(HuffmanNode* root, BitStream* stream)
+int DecodeFromTree(HuffmanNode* root, BitStream* stream)
 {
 	while (root->right || root->left)
 	{
-		char b = bs_GetBit(stream);
+		char b = bs_ReadBit(stream);
 		if (b)
 			root = root->right;
 		else
