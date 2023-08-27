@@ -14,7 +14,7 @@ Documentation:
 
 typedef struct
 {
-	char** data; //An array of arrays containing each block
+	unsigned char** data; //An array of arrays containing each block
 	unsigned long* lengths; //An array containing the lengths of each block (in bytes)
 
 	unsigned int blockCount; //The number of blocks of data stored in the result
@@ -74,10 +74,10 @@ static const int zlib_CodeLengthIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
 /// This assumes that src is the entire zlib string. If this is invalid then it will reutrn STARDUST_FILE_INVALID
 /// </summary>
 /// <param name="dstBuffer">A pointer to the destination buffer</param>
-/// <param name="uncompressedLength>The length of dstBuffer</param>
+/// <param name="uncompressedLength">The length of dstBuffer</param>
 /// <param name="srcBuffer">The src data buffer</param>
 /// <returns>Error code</returns>
-StardustErrorCode zlib_Inflate(char** dstBuffer, unsigned long* uncompressedLength, char* srcBuffer);
+StardustErrorCode zlib_Inflate(unsigned char** dstBuffer, unsigned long* uncompressedLength, unsigned char* srcBuffer);
 
 /// <summary>
 /// Validates that the zlib container holds the correct info.
@@ -96,7 +96,7 @@ StardustErrorCode zlib_ValidateContainer(BitStream* stream);
 /// <param name="dataLen">Length of the data</param>
 /// <param name="result">Result to append to</param>
 /// <returns>0 for success</returns>
-StardustErrorCode zlib_AppendResult(char* data, unsigned long dataLen, ZLIBResult* result);
+StardustErrorCode zlib_AppendResult(unsigned char* data, unsigned long dataLen, ZLIBResult* result);
 
 
 /// <summary>
@@ -108,7 +108,7 @@ StardustErrorCode zlib_AppendResult(char* data, unsigned long dataLen, ZLIBResul
 /// <param name="dst">Pointer to destination array</param>
 /// <param name="size">The length of dst</param>
 /// <returns></returns>
-StardustErrorCode zlib_ConcatenateResult(ZLIBResult* result, char** dst, int* size);
+StardustErrorCode zlib_ConcatenateResult(ZLIBResult* result, unsigned char** dst, int* size);
 
 
 /// <summary>

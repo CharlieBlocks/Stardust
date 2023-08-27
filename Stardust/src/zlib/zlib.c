@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 
-StardustErrorCode zlib_Inflate(char** dstBuffer, unsigned long* uncompressedLength, char* srcBuffer)
+StardustErrorCode zlib_Inflate(unsigned char** dstBuffer, unsigned long* uncompressedLength, unsigned char* srcBuffer)
 {
 	StardustErrorCode ret;
 	
@@ -75,7 +75,7 @@ StardustErrorCode zlib_ValidateContainer(BitStream* stream)
 }
 
 //Appends some data to a zlib result
-StardustErrorCode zlib_AppendResult(char* data, unsigned long dataLen, ZLIBResult* result)
+StardustErrorCode zlib_AppendResult(unsigned char* data, unsigned long dataLen, ZLIBResult* result)
 {
 	// Check if we are at capacity
 	if (result->blockCount == result->capacity)
@@ -117,7 +117,7 @@ StardustErrorCode zlib_AppendResult(char* data, unsigned long dataLen, ZLIBResul
 }
 
 
-StardustErrorCode zlib_ConcatenateResult(ZLIBResult* result, char** dst, int* size)
+StardustErrorCode zlib_ConcatenateResult(ZLIBResult* result, unsigned char** dst, int* size)
 {
 	// Get total length of new array
 	long totalLength = 0;
@@ -191,8 +191,11 @@ StardustErrorCode zlib_EnumerateBlocks(BitStream* stream, ZLIBResult* result)
 			zlib_InflateDynamicCompression(stream, result);
 		else // 11
 			// Not allowed. Return error
+		{
 			zlib_FreeStaticTrees(&tree);
 			return STARDUST_ERROR_FILE_INVALID;
+		}
+
 	}
 
 	zlib_FreeStaticTrees(&tree);
@@ -423,7 +426,7 @@ StardustErrorCode zlib_DecodeTrees(BitStream* stream, HuffmanNode** litLenTree, 
 
 	// Create trees
 	*litLenTree = DeriveTreeFromBitLengths(codes, zlib_StaticLiteralLengthIndices, HLIT);
-	*distTree = DeriveTreeFromBitLengths(codes + HLIT, zlib_StaticDistanceIndices, 30);
+	*distTree = DeriveTreeFromBitLengths(codes + HLIT, zlib_StaticDistanceIndices, HDIST);
 
 	free(codeTree);
 

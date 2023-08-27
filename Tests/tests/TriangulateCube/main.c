@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 
     StardustErrorCode res = sd_LoadMesh(objectPath, STARDUST_MESH_TRIANGULATE, &meshes, &meshCount);
     if (res != STARDUST_ERROR_SUCCESS)
-        return 1;
+        return res;
 
 
     //Delete mesh

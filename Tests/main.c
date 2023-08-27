@@ -8,14 +8,36 @@
 
 int main(int argc, char* argv[])
 {
-	const char* meshPath = "D:\\Programs\\C\\Stardust\\BlenderAssets\\fbxCube.fbx";
+	const char* meshPath = "D:\\Programs\\C\\Stardust\\BlenderAssets\\nonTrigCube.obj";
 	int runCount = 10;
 
 	StardustMesh* meshes = 0;
 	size_t meshCount = 0;
 	StardustErrorCode res;
 
-	res = sd_LoadMesh(meshPath, 0, &meshes, &meshCount);
+	res = sd_LoadMesh(meshPath, STARDUST_MESH_TRIANGULATE, &meshes, &meshCount);
+
+	if (res != 0)
+	{
+		printf("Error Occured. Error code -> %i", res);
+		return res;
+	}
+
+	printf("Vertex Stride: %i\n", meshes->vertexStride);
+	printf("Vertex Count: %i\n", meshes->vertexCount);
+	printf("Index Count: %i\n", meshes->indexCount);
+
+
+	// Print Polygons
+	printf("Polygons:\n");
+	for (int i = 0; i < meshes->indexCount; i += meshes->vertexStride)
+	{
+		printf("Triangle %i\n", (int)(i / meshes->vertexStride));
+		printf("Indices -> %i, %i, %i\n", meshes->indices[i], meshes->indices[i + 1], meshes->indices[i + 2]);
+		sd_PrintVertex(&meshes->vertices[meshes->indices[i]]);
+		sd_PrintVertex(&meshes->vertices[meshes->indices[i + 1]]);
+		sd_PrintVertex(&meshes->vertices[meshes->indices[i + 2]]);
+	}
 
 	return 0;
 

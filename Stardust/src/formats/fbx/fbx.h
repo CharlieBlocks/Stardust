@@ -2,6 +2,13 @@
 #define _FBX
 
 /*
+TODO: 
+	Use bitwise sign and abs func
+	Add support for n-gons and iregular meshes
+	Add support for materials
+*/
+
+/*
 FBX is a proprietry file format developed by autodesk. Due to this some hackiness/reverse engineering is required and not all files will work
 Shoutout to Blender for both being open source and having a blogpost on how they are structured.
 
@@ -130,6 +137,23 @@ typedef enum
 
 } FBXPropertyType;
 
+typedef enum
+{
+	FBX_DIRECT = 1,
+	FBX_INDEX_TO_DIRECT = 2
+} FBXApplicationType;
+
+typedef enum
+{
+	FBX_VERTICES = 1 << 0,
+	FBX_INDICES = 1 << 1,
+	FBX_NORMALS = 1 << 2,
+	FBX_UVS = 1 << 3
+} FBXDataType;
+
+static const char* FBXApplicationDirectStr = "Direct";
+static const char* FBXApplicationIndexToDirectStr = "IndexToDirect";
+
 static int FBXPropertyDictInit = 0;
 static FBXPropertyType FBXPropertyDict[109];
 
@@ -176,6 +200,36 @@ struct FBXNode
 	struct FBXNode** children;
 };
 
+typedef struct
+{
+	FBXDataType dataType;
+
+	float* vertexData;
+	unsigned int vertexCount;
+
+	int* indexData;
+	unsigned int indexCount;
+
+	FBXApplicationType normalApplication;
+	float* normalData;
+	unsigned int* normalIndexData;
+	unsigned int normalCount;
+	unsigned int normalIndexCount;
+
+	FBXApplicationType uvApplication;
+	float* uvData;
+	unsigned int* uvIndexData;
+	unsigned int uvCount;
+	unsigned int uvIndexCount;
+} FBXRawData;
+
+struct FBXVertexHash
+{
+	unsigned int nrmIdx;
+	unsigned int uvIdx;
+	unsigned int vtxIdx;
+	unsigned int hash;
+};
 
 /// <summary>
 /// Loads an FBX file
@@ -188,6 +242,23 @@ struct FBXNode
 StardustErrorCode _fbx_LoadMesh(const char* path, const StardustMeshFlags flags, StardustMesh** meshes, size_t* meshCount);
 
 StardustErrorCode _fbx_GetHeader(FileStream* stream, uint32_t* version);
+
+// Mesh functions
+StardustErrorCode fbx_GetMesh(struct FBXNode* globalNode, StardustMesh** meshes, const StardustMeshFlags flags);
+int fbx_GetNode(struct FBXNode* globalNode, const char* label, int startAt);
+void fbx_FreeRawData(FBXRawData* data);
+
+StardustErrorCode fbx_GetVertices(struct FBXNode* node, FBXRawData* data);
+StardustErrorCode fbx_GetIndices(struct FBXNode* node, FBXRawData* data);
+StardustErrorCode fbx_GetNormals(struct FBXNode* node, FBXRawData* data);
+StardustErrorCode fbx_GetTextureCoords(struct FBXNode* node, FBXRawData* data);
+unsigned int* fbx_GenerateDirectIndices(unsigned int count);
+
+StardustErrorCode fbx_CompactArray(float* arr, unsigned int* indices, unsigned int* arrSize, unsigned int elementStride, unsigned int indexSize);
+StardustErrorCode fbx_ComputeHashAndIndexArray(FBXRawData* data, struct FBXVertexHash** hashArr, unsigned int* indexArr, unsigned int* arrSize);
+StardustErrorCode fbx_FormatIndexArray(FBXRawData* data, unsigned int** indexArr);
+
+FBXApplicationType fbx_GetApplicationType(const char* attrib, unsigned int len);
 
 // Node Functions
 StardustErrorCode _fbx_GetGlobalNode(FileStream* stream, struct FBXNode* globalNode);
